@@ -1,0 +1,11 @@
+{
+  // The CLI runs on Node, so Node types are allowed here. The build uses tsconfig.build.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "resolveJsonModule": true,
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src", "test"]
+}

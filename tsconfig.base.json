@@ -1,0 +1,20 @@
+{
+  // Shared compiler options. Module resolution is `nodenext` on purpose: the packages are
+  // ESM-only, so relative imports carry the `.js` suffix Node requires at runtime, and a
+  // consumer on `bundler` resolution still reads the emitted `dist/`.
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

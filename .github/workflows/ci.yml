@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # Short, stable names: the ruleset on main requires these checks by job name.
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # GitHub's own actions stay on a major: GitHub owns the action and the runner.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Third-party actions are pinned by commit SHA, version in the comment: a tag can be
+      # moved by whoever publishes it, and this job runs with the repository token.
+      #
+      # Installs pnpm (version from `packageManager`) and Node (major from
+      # `devEngines.runtime`), both in package.json, then runs the frozen install.
+      # `.nvmrc` stays for local `nvm use` only.
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          require-lockfile: true
+
+      # The same command that runs locally. No test reaches the network.
+      - run: pnpm check
+
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # gitleaks runs from its pinned release binary, not gitleaks/gitleaks-action: the action
+      # is not MIT-licensed since v2, posts PR comments (needs write permission) and adds a
+      # third-party runtime to a job that holds the repository token. The checksum is a
+      # literal, so a replaced release asset fails the job. Dependabot does not update this
+      # pin; bump the version and the checksum together by hand.
+      #
+      # Scans the full history, so a secret added and removed inside one PR is still caught.
+      # `--redact` keeps any finding's value out of the public log.
+      - name: gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git . -v --redact

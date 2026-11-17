@@ -1,0 +1,8 @@
+node_modules
+.claude
+dist
+coverage
+pnpm-lock.yaml
+issues
+docs/history
+*.md

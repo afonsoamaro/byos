@@ -1,0 +1,33 @@
+{
+  "name": "@byos/cli",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/afonsoamaro/byos.git",
+    "directory": "packages/cli"
+  },
+  "bin": {
+    "byos": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@byos/core": "workspace:*",
+    "@byos/drive": "workspace:*",
+    "commander": "15.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "catalog:",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

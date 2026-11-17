@@ -1,0 +1,29 @@
+{
+  "issue": "FN-00",
+  "app": "byos",
+  "branch": null,
+  "attribution": "approximate",
+  "attribution_note": "No git repository yet (created in FN-00b). Cost and time cover the whole session that also ran specs, break and planning, so they overstate this issue.",
+  "verdict": "pass",
+  "score": 96,
+  "dimensions": { "scope": 25, "tests": 19, "security": 15, "reuse": 15, "architecture": 10, "guidelines": 9, "discipline": 3 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/core/test/index.test.ts:8", "what": "Entry-point tests are thin by design (no feature code yet); real behavior tests start in FN-01", "fixed": false },
+    { "dim": "discipline", "severity": "low", "file": "issues/_index.md", "what": "Verifier did not check the index status; set to done at close", "fixed": true },
+    { "dim": "guidelines", "severity": "low", "file": "eslint.config.mjs:15", "what": "docs/history ignore points at a folder that FN-00b creates", "fixed": false },
+    { "dim": "discipline", "severity": "low", "file": "packages/cli/tsconfig.json:6", "what": "resolveJsonModule and rootDir not in the plan, required by the package.json import in the test", "fixed": false },
+    { "dim": "guidelines", "severity": "low", "file": "package.json:30", "what": "typescript-eslint 8.73.0 is inside the 24 h window; 8.72.2 is correct", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 17.99,
+    "verification_usd": 1.2,
+    "total_usd": 19.18,
+    "tokens": { "input": 438, "output": 238351, "cache_read": 23714172, "cache_creation": 2077633, "thinking": 61810 }
+  },
+  "time": { "wall_clock_min": 4415, "active_min": 79 },
+  "interactions": { "user_messages": 13, "assistant_turns": 186, "tool_calls": 95 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-16T21:36:01Z"
+}

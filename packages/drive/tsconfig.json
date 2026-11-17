@@ -1,0 +1,13 @@
+{
+  // Source typecheck without Node types: this package must also run in React Native and the
+  // browser. `fetch`, streams and `crypto.subtle` come from the `dom` lib; `Buffer` and
+  // `process` don't exist here. Tests get Node types from `test/tsconfig.json`.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2024", "dom"],
+    "types": [],
+    "rootDir": "src",
+    "noEmit": true
+  },
+  "include": ["src"]
+}

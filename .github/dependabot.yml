@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - 'prettier'
+          - 'vitest'
+          - 'vite'
+          - 'esbuild'
+          - '@types/node'
+    ignore:
+      # typescript-eslint declares peer typescript <6.1.0: on 7.x typecheck
+      # stays green while lint breaks. Drop this when that ceiling moves.
+      - dependency-name: 'typescript'
+        versions: ['>=6.1.0']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

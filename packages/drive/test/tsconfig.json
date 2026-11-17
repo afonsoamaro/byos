@@ -1,0 +1,10 @@
+{
+  // Tests run on Node under vitest, so they get Node types; `src` stays without them.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "resolveJsonModule": true,
+    "rootDir": ".."
+  },
+  "include": [".", "../src"]
+}

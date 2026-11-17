@@ -1,0 +1,25 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Secrets and credentials: this repository is public
+.env
+.env.*
+!.env.example
+client_secret*.json
+*.byos
+tokens/
+
+# Backup manifests
+*.sqlite
+*.sqlite-*
+*.db
+
+# Local tooling
+.DS_Store
+.claude/worktrees/
+
+# Maintainer-only planning notes that name local sources
+issues/_local/

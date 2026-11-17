@@ -1,0 +1,12 @@
+packages:
+  - packages/*
+
+catalog:
+  # typescript-eslint 8.72.2 declares the peer `typescript: >=4.8.4 <6.1.0`.
+  # On 7.x typecheck passes but type-aware lint breaks. Revisit when the peer ceiling moves.
+  typescript: 6.0.3
+
+allowBuilds:
+  # The esbuild binary comes from its platform optional dependency; the postinstall only
+  # re-checks it. Denied until the portability test proves esbuild can't start without it.
+  esbuild: false
