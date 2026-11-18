@@ -10,3 +10,7 @@ allowBuilds:
   # The esbuild binary comes from its platform optional dependency; the postinstall only
   # re-checks it. Denied until the portability test proves esbuild can't start without it.
   esbuild: false
+
+overrides:
+  # GHSA-g3hv-75wg-m249: typescript-estree pins minimatch ^10; drops out once the parent moves to >=11.0.1.
+  'minimatch@<11.0.1': ^11.0.1
