@@ -206,3 +206,24 @@ Validated lessons this plan applies:
 
 ## Checkpoint
 - `Checkpoint: sim` after step 6 (security settings before the first push): re-read the `gh api` output and confirm both scanning statuses are `enabled` before step 7.
+
+---
+
+# Execution Record (2026-11-16 to 2026-11-17)
+
+## Security gate (before the first push)
+1. `gitleaks git . -v` on commit `3ce53e7` (the whole history): `no leaks found`. `gitleaks dir . -v`: `no leaks found`.
+2. Manual grep of the 66 committed files for credential shapes, email addresses, home paths and other project or infra names. The only matches were placeholders (`owner@example.com`, `your.apps.googleusercontent.com`, `your_secret`, `C:\Users\me`) and this issue's own rule text.
+3. `.gitignore` covers `.env*` (except `.env.example`), `client_secret*.json`, `*.byos`, `tokens/`, `*.sqlite`, `*.sqlite-*`, `*.db`, `coverage/`, `dist/`, and `issues/_local/`.
+4. Repo created public on 2026-11-17. Secret scanning and push protection were enabled before the first push. `gh api repos/afonsoamaro/byos` reported `secret_scanning: enabled`, `secret_scanning_push_protection: enabled`, `allow_squash_merge: false`, `allow_rebase_merge: false`, `allow_merge_commit: true`, `delete_branch_on_merge: false`.
+5. The `secrets` job in `.github/workflows/ci.yml` runs gitleaks 8.30.1 from the checksum-verified release binary on every pull request and every push to `main`.
+
+## Commits and CI
+- Bootstrap commit `3ce53e7` on `main`. Author and committer are both the GitHub noreply address, set in the local repo config.
+- First CI run `44108101164`, a push to `main`: `check` success and `secrets` success. In the `secrets` log, the checksum check printed `OK`, then `1 commits scanned.` and `no leaks found`. The only annotation was a GitHub notice about `ubuntu-latest` moving to Ubuntu 26. No warnings.
+
+## Ruleset
+- Ruleset `27482952` (`main`, active). `gh api repos/afonsoamaro/byos/rules/branches/main` lists `deletion,non_fast_forward,pull_request,required_status_checks`, with `allowed_merge_methods: ["merge"]` and required checks `check` and `secrets` (GitHub Actions, `integration_id` 15368).
+
+## Old design handoff
+- Moved to `docs/history/` with a `README.md` that says `SPECS.md` supersedes it and that the sync design was cut.
