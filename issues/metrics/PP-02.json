@@ -1,0 +1,30 @@
+{
+  "issue": "PP-02",
+  "app": "byos",
+  "branch": "feat/PP-02-cli-output",
+  "attribution": "branch",
+  "attribution_note": "Planning ran on main before the branch existed, so its cost is not counted here.",
+  "verdict": "pass",
+  "score": 96,
+  "dimensions": { "scope": 24, "tests": 19, "security": 15, "reuse": 15, "architecture": 9, "guidelines": 9, "discipline": 5 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "scope", "severity": "low", "file": "issues/PP-02-prototype-cli-output.md:40", "what": "The owner's approval is evidenced only by the Verdict line", "fixed": false },
+    { "dim": "guidelines", "severity": "low", "file": "issues/PP-02-prototype-cli-output.md:62", "what": "Public issue text cited internal knowledge-registry file paths (same in PP-01); rewritten as plain facts in both issues", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "scripts/cli-output-mock.ts:1", "what": "554-line prototype mixing scenarios, doc generator and entry point; documented deviation", "fixed": false },
+    { "dim": "tests", "severity": "low", "file": "tests/cli-output-mock.test.ts:159", "what": "FN-01 code check relies on three regexes over the doc", "fixed": false },
+    { "dim": "reuse", "severity": "low", "file": "docs/cli-output.md:156", "what": "Progress bytes derived proportionally (18.1 GB vs the plan's 17.9 GB example); consistent with the doc", "fixed": false },
+    { "dim": "discipline", "severity": "low", "file": "issues/PP-02-prototype-cli-output.md:237", "what": "All deviations declared in the Execution Record", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 4.57,
+    "verification_usd": 1.45,
+    "total_usd": 6.02,
+    "tokens": { "input": 150, "output": 80244, "cache_read": 13039390, "cache_creation": 522746, "thinking": 19421 }
+  },
+  "time": { "wall_clock_min": 249, "active_min": 22 },
+  "interactions": { "user_messages": 3, "assistant_turns": 54 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-19T22:52:15Z"
+}
