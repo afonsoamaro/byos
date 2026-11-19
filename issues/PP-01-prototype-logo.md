@@ -52,8 +52,8 @@ BYOS has no screens, but it still needs its own mark before the repo goes public
 - `package.json` `lint` runs `prettier --check .`: any new `.html` file is format-checked (SVG and PNG are not, Prettier has no parser for them). `.prettierignore` already skips `issues` and `*.md`.
 
 ## Knowledge Registry
-- registro: portfólio/workflow-recipes.md, "Header dos READMEs": layout of the 1200×630 header (background `#0a0e1a`, 40 px grid with radial mask, accent glow in one corner, two-line 82 px title at weight 800, `FIG. 01` label and monospace tagline in `#6b7488`, theme visual, ~344 px spec panel with a hero value, stack pills, footer) and the exact Chrome plus `magick` command. Read it before writing `docs/brand/header.html` and `scripts/render-brand.sh`.
-- registro: global/macos.md, `env bash` is bash 3.2 on macOS: the render script must not use `mapfile`, `declare -A` or other bash 4 features.
+- The 1200×630 header layout used across the maintainer's READMEs (background `#0a0e1a`, 40 px grid with radial mask, accent glow in one corner, two-line 82 px title at weight 800, `FIG. 01` label and monospace tagline in `#6b7488`, theme visual, ~344 px spec panel with a hero value, stack pills, footer) and the exact Chrome plus `magick` command. Read it before writing `docs/brand/header.html` and `scripts/render-brand.sh`.
+- `env bash` is bash 3.2 on macOS: the render script must not use `mapfile`, `declare -A` or other bash 4 features.
 
 ## Architecture Decisions
 - **Accent color: `#a3e635` (lime).** The portfolio rule is one new accent per project; every header surveyed already uses cyan, teal, sky, indigo, violet, purple, pink, rose, red, orange, amber, yellow and green tones, and lime is unused. It is also the logo's primary color, since BYOS has no UI theme of its own. Secondary text colors come from the header recipe (`#e8ecf2`, `#6b7488`, `#8b93a7`).

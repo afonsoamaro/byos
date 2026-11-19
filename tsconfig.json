@@ -1,9 +1,11 @@
 {
-  // Root typecheck: the vitest config and the cross-package tests in `tests/`.
+  // Root typecheck: the vitest config, the cross-package tests in `tests/` and the scripts in
+  // `scripts/`. Scripts run directly on Node (type stripping), so only erasable syntax is allowed.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "noEmit": true
+    "noEmit": true,
+    "erasableSyntaxOnly": true
   },
-  "include": ["vitest.config.ts", "tests"]
+  "include": ["vitest.config.ts", "tests", "scripts"]
 }

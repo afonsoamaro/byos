@@ -8,7 +8,7 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 | Issue | Name | Status | Dependencies |
 |-------|------|--------|--------------|
 | PP-01 | Prototype: Logo and README header | done | FN-00 |
-| PP-02 | Prototype: CLI output | todo | FN-00 |
+| PP-02 | Prototype: CLI output | done | FN-00 |
 
 ## Functional Issues
 | Issue | Name | Status | Dependencies | Checkpoint |
