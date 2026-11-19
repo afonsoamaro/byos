@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BYOS logo directions</title>
+    <!-- Tokens, grid and font stacks shared with header.html (the original); the pages are standalone renders, so the CSS is duplicated on purpose. -->
+    <style>
+      :root {
+        --bg: #0a0e1a;
+        --grid: rgba(255, 255, 255, 0.035);
+        --text: #e8ecf2;
+        --dim: #6b7488;
+        --dim2: #8b93a7;
+        --accent: #a3e635;
+        --line: rgba(255, 255, 255, 0.08);
+        --light: #f6f8fa;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1600px;
+        height: 900px;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+        position: relative;
+        overflow: hidden;
+      }
+      .bg-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(var(--grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+        background-size: 40px 40px;
+      }
+      .mono {
+        font-family: 'SF Mono', 'Menlo', monospace;
+      }
+      .stage {
+        position: absolute;
+        inset: 0;
+        padding: 56px 64px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 48px;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      .name {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .name span {
+        color: var(--accent);
+      }
+      .why {
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--dim2);
+        min-height: 68px;
+      }
+      .tile {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .big {
+        width: 320px;
+        height: 320px;
+      }
+      .big img {
+        width: 288px;
+        height: 288px;
+      }
+      .row {
+        display: flex;
+        align-items: flex-end;
+        gap: 20px;
+      }
+      .t120 {
+        width: 136px;
+        height: 136px;
+        border-radius: 18px;
+      }
+      .t120 img {
+        width: 120px;
+        height: 120px;
+      }
+      .t60 {
+        width: 72px;
+        height: 72px;
+        border-radius: 12px;
+      }
+      .t60 img {
+        width: 60px;
+        height: 60px;
+      }
+      .t60.light {
+        background: var(--light);
+      }
+      .cap {
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-grid"></div>
+    <div class="stage">
+      <div class="col">
+        <div class="name"><span>A</span> key to your cloud</div>
+        <div class="why mono">A cloud with a keyhole: your storage, and you hold the key.</div>
+        <div class="tile big"><img src="directions/a-key-cloud.svg" alt="" /></div>
+        <div class="cap mono">120 px · 60 px · 60 px on light</div>
+        <div class="row">
+          <div class="tile t120"><img src="directions/a-key-cloud.svg" alt="" /></div>
+          <div class="tile t60"><img src="directions/a-key-cloud.svg" alt="" /></div>
+          <div class="tile t60 light"><img src="directions/a-key-cloud.svg" alt="" /></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="name"><span>B</span> into your drive</div>
+        <div class="why mono">
+          An arrow landing in a drive tray: files leave the app and land in the user's drive.
+        </div>
+        <div class="tile big"><img src="directions/b-box-drive.svg" alt="" /></div>
+        <div class="cap mono">120 px · 60 px · 60 px on light</div>
+        <div class="row">
+          <div class="tile t120"><img src="directions/b-box-drive.svg" alt="" /></div>
+          <div class="tile t60"><img src="directions/b-box-drive.svg" alt="" /></div>
+          <div class="tile t60 light"><img src="directions/b-box-drive.svg" alt="" /></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="name"><span>C</span> b folder</div>
+        <div class="why mono">
+          A lowercase b whose bowl is a folder: the monogram is the file container.
+        </div>
+        <div class="tile big"><img src="directions/c-b-folder.svg" alt="" /></div>
+        <div class="cap mono">120 px · 60 px · 60 px on light</div>
+        <div class="row">
+          <div class="tile t120"><img src="directions/c-b-folder.svg" alt="" /></div>
+          <div class="tile t60"><img src="directions/c-b-folder.svg" alt="" /></div>
+          <div class="tile t60 light"><img src="directions/c-b-folder.svg" alt="" /></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

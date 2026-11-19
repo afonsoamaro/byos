@@ -1,0 +1,29 @@
+{
+  "issue": "PP-01",
+  "app": "byos",
+  "branch": "feat/PP-01-logo",
+  "attribution": "branch",
+  "attribution_note": "Planning ran on main before the branch existed, so its cost is not counted here.",
+  "verdict": "pass",
+  "score": 94,
+  "dimensions": { "scope": 24, "tests": 18, "security": 15, "reuse": 15, "architecture": 10, "guidelines": 8, "discipline": 4 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "discipline", "severity": "low", "file": "issues/_index.md:10", "what": "PP-01 was still 'planned' at verification time; the verify step flips it to done", "fixed": true },
+    { "dim": "discipline", "severity": "low", "file": "docs/brand/header.html", "what": "Third line in the spec panel beyond the plan's two; documented deviation", "fixed": false },
+    { "dim": "scope", "severity": "low", "file": "docs/brand/directions/b-box-drive.svg", "what": "Direction B drawn without the app box; documented deviation", "fixed": false },
+    { "dim": "guidelines", "severity": "low", "file": "docs/brand/header.html", "what": "Translucent accent variants written as hex literals instead of derived from --accent; standalone render page", "fixed": false },
+    { "dim": "tests", "severity": "low", "file": "scripts/render-brand.sh", "what": "No automated test, by plan; size assertion and failure path reproduced by the verifier", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 2.28,
+    "verification_usd": 0.93,
+    "total_usd": 3.21,
+    "tokens": { "input": 150, "output": 43281, "cache_read": 8518996, "cache_creation": 268219, "thinking": 7739 }
+  },
+  "time": { "wall_clock_min": 10, "active_min": 10 },
+  "interactions": { "user_messages": 3, "assistant_turns": 54 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-19T15:06:06Z"
+}

@@ -1,4 +1,4 @@
-<!-- header image: added with the logo round -->
+![BYOS: Bring Your Own Storage](docs/header.png)
 
 # BYOS: Bring Your Own Storage
 

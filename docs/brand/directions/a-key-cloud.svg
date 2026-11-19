@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <mask id="cut">
+    <rect width="1024" height="1024" fill="#fff"/>
+    <circle cx="512" cy="590" r="64" fill="#000"/>
+    <path d="M478 620h68l30 130H448z" fill="#000"/>
+  </mask>
+  <g fill="#a3e635" mask="url(#cut)">
+    <circle cx="420" cy="470" r="210"/>
+    <circle cx="680" cy="530" r="160"/>
+    <rect x="120" y="520" width="784" height="300" rx="150"/>
+  </g>
+</svg>
