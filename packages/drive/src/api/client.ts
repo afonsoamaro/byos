@@ -5,6 +5,13 @@ import { networkError } from '../http-errors.js';
 import type { TokenManager } from '../oauth/token-manager.js';
 import { mapDriveError } from './errors.js';
 
+/** A request's method, extra headers and body; the body is reused as is on a retry. */
+export interface DriveRequestInit {
+  readonly method?: 'GET' | 'POST' | 'PATCH';
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly body?: Uint8Array<ArrayBuffer> | string;
+}
+
 export interface DriveClientOptions {
   readonly tokens: TokenManager;
   readonly fetch?: typeof fetch;
@@ -37,8 +44,34 @@ export class DriveClient {
     this.#now = options.now ?? Date.now;
   }
 
-  async json<S extends z.ZodType>(operation: string, url: string, schema: S): Promise<z.infer<S>> {
-    const response = await this.#request(operation, url);
+  /** A JSON request inside the core `retry`. */
+  async json<S extends z.ZodType>(
+    operation: string,
+    url: string,
+    schema: S,
+    init?: DriveRequestInit,
+  ): Promise<z.infer<S>> {
+    return this.#parse(operation, await this.#request(operation, url, init), schema);
+  }
+
+  /**
+   * A single attempt (with the 401 refresh, without `retry`), for requests that aren't
+   * idempotent: the caller retries with its own reconciliation.
+   */
+  async jsonOnce<S extends z.ZodType>(
+    operation: string,
+    url: string,
+    schema: S,
+    init?: DriveRequestInit,
+  ): Promise<z.infer<S>> {
+    return this.#parse(operation, await this.#send(operation, url, 1, init), schema);
+  }
+
+  async #parse<S extends z.ZodType>(
+    operation: string,
+    response: Response,
+    schema: S,
+  ): Promise<z.infer<S>> {
     const parsed = schema.safeParse(await readJson(response));
     if (!parsed.success) {
       throw new ProviderError(`unexpected response from Google Drive (${operation})`);
@@ -59,23 +92,28 @@ export class DriveClient {
     );
   }
 
-  #request(operation: string, url: string): Promise<Response> {
+  #request(operation: string, url: string, init?: DriveRequestInit): Promise<Response> {
     const { events } = this.#options;
-    return retry((attempt) => this.#send(operation, url, attempt), {
+    return retry((attempt) => this.#send(operation, url, attempt, init), {
       operation,
       ...(events?.onRetry === undefined ? {} : { onRetry: events.onRetry }),
       ...this.#options.retry,
     });
   }
 
-  async #send(operation: string, url: string, attempt: number): Promise<Response> {
+  async #send(
+    operation: string,
+    url: string,
+    attempt: number,
+    init?: DriveRequestInit,
+  ): Promise<Response> {
     const { tokens, events } = this.#options;
     events?.onRequest?.({ operation, attempt });
     const token = await tokens.getAccessToken();
-    let response = await this.#fetchWith(url, token);
+    let response = await this.#fetchWith(url, token, init);
     if (response.status === 401) {
       const refreshed = await tokens.handleUnauthorized(token);
-      response = await this.#fetchWith(url, refreshed);
+      response = await this.#fetchWith(url, refreshed, init);
       if (response.status === 401) {
         throw new AuthError(
           'Google Drive rejected the access token after a refresh; sign in again',
@@ -91,9 +129,13 @@ export class DriveClient {
     return response;
   }
 
-  async #fetchWith(url: string, token: string): Promise<Response> {
+  async #fetchWith(url: string, token: string, init?: DriveRequestInit): Promise<Response> {
     try {
-      return await this.#fetch(url, { headers: { authorization: `Bearer ${token}` } });
+      return await this.#fetch(url, {
+        method: init?.method ?? 'GET',
+        headers: { ...init?.headers, authorization: `Bearer ${token}` },
+        ...(init?.body === undefined ? {} : { body: init.body }),
+      });
     } catch (error) {
       throw networkError(error, 'Google Drive');
     }

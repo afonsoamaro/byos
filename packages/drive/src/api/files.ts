@@ -56,3 +56,12 @@ export function toFileStat(file: DriveFile): FileStat {
     appProperties,
   };
 }
+
+export const UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files';
+
+/** `upload/drive/v3/files[/<id>]` with query parameters. */
+export function uploadUrl(id: string | undefined, params: Record<string, string>): string {
+  const url = new URL(id === undefined ? UPLOAD_URL : `${UPLOAD_URL}/${encodeURIComponent(id)}`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}

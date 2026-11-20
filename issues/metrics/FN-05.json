@@ -1,0 +1,29 @@
+{
+  "issue": "FN-05",
+  "app": "byos",
+  "branch": "feat/FN-05-drive-write",
+  "attribution": "approximate",
+  "attribution_note": "The collector counted only the last minutes on the branch; most turns carry another branch label, so time is understated.",
+  "verdict": "pass",
+  "score": 93,
+  "dimensions": { "scope": 25, "tests": 18, "security": 14, "reuse": 14, "architecture": 8, "guidelines": 9, "discipline": 5 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/drive/test/drive/write-operations.test.ts", "what": "Overwrite test did not assert the PATCH metadata (byosSha256, byosVersion)", "fixed": true },
+    { "dim": "tests", "severity": "low", "file": "packages/drive/test/drive/write-operations.test.ts", "what": "Folder lost-response test did not count creates or the retry", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/drive/src/drive-provider.ts", "what": "Provider at ~320 lines mixing read, write, resolution and reconciliation; split when FN-06/FN-07 land", "fixed": false },
+    { "dim": "guidelines", "severity": "low", "file": "issues/FN-05-drive-mkdir-and-put.md", "what": "Example folder named after another project; replaced in the plan and tests (still in the original issue text, SPECS, FN-11 and FN-17)", "fixed": true },
+    { "dim": "reuse", "severity": "low", "file": "packages/drive/src/drive-provider.ts", "what": "Multipart send appears twice (POST and PATCH); a helper when FN-06 reuses it", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 5.67,
+    "verification_usd": 2.24,
+    "total_usd": 7.92,
+    "tokens": { "input": 134, "output": 87747, "cache_read": 27491646, "cache_creation": 251381, "thinking": 12857 }
+  },
+  "time": { "wall_clock_min": 6, "active_min": 6 },
+  "interactions": { "user_messages": 2, "assistant_turns": 48 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-20T18:44:43Z"
+}

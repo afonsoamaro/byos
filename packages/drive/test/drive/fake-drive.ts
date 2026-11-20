@@ -1,6 +1,6 @@
-// An in-memory stand-in for the Drive v3 endpoints the provider reads. It interprets only
-// the two query shapes the provider sends, checks the bearer token, pages by offset, and
-// records every request with its headers.
+// An in-memory stand-in for the Drive v3 endpoints the provider uses. It interprets only
+// the two query shapes the provider sends, checks the bearer token, pages by offset, parses
+// multipart uploads, and records every request with its headers and body.
 
 export interface FakeFile {
   id: string;
@@ -8,6 +8,8 @@ export interface FakeFile {
   parents: string[];
   mimeType?: string;
   content?: string;
+  /** Uploaded bytes; wins over `content`. */
+  bytes?: Uint8Array<ArrayBuffer>;
   appProperties?: Record<string, string>;
   md5Checksum?: string;
   trashed?: boolean;
@@ -20,6 +22,31 @@ export interface DriveRequest {
   method: string;
   url: URL;
   headers: Record<string, string>;
+  body?: Uint8Array<ArrayBuffer>;
+}
+
+export interface MultipartParts {
+  metadata: Record<string, unknown>;
+  mimeType: string;
+  bytes: Uint8Array<ArrayBuffer>;
+}
+
+/** Splits a `multipart/related` upload into its JSON metadata and its bytes. */
+export function parseMultipart(body: Uint8Array<ArrayBuffer>, contentType: string): MultipartParts {
+  const boundary = /boundary=(.+)$/.exec(contentType)?.[1];
+  if (!boundary) throw new Error('no boundary in content-type');
+  const text = new TextDecoder('latin1').decode(body);
+  const [, first = '', second = ''] = text.split(`--${boundary}`);
+  const json = first.slice(first.indexOf('\r\n\r\n') + 4, first.lastIndexOf('\r\n'));
+  const mediaHeaderEnd = second.indexOf('\r\n\r\n');
+  const mimeType = /Content-Type: (.+)/.exec(second.slice(0, mediaHeaderEnd))?.[1]?.trim() ?? '';
+  const start = text.indexOf(second) + mediaHeaderEnd + 4;
+  const end = text.lastIndexOf(`\r\n--${boundary}--`);
+  return {
+    metadata: JSON.parse(json) as Record<string, unknown>,
+    mimeType,
+    bytes: body.slice(start, end),
+  };
 }
 
 export const FOLDER = 'application/vnd.google-apps.folder';
@@ -44,7 +71,8 @@ export function fakeDrive(initial: FakeFile[] = []) {
     ]),
   );
   const requests: DriveRequest[] = [];
-  const queued: { match: RegExp; reply: FakeDriveReply }[] = [];
+  const queued: { match: RegExp; reply: FakeDriveReply; apply: boolean }[] = [];
+  let nextId = 1;
   const state = { validToken: 'access-1' };
 
   const resource = (file: FakeFile) => ({
@@ -52,9 +80,11 @@ export function fakeDrive(initial: FakeFile[] = []) {
     name: file.name,
     parents: file.parents,
     mimeType: file.mimeType ?? 'application/octet-stream',
-    ...(file.content === undefined
-      ? {}
-      : { size: String(new TextEncoder().encode(file.content).length) }),
+    ...(file.bytes !== undefined
+      ? { size: String(file.bytes.length) }
+      : file.content === undefined
+        ? {}
+        : { size: String(new TextEncoder().encode(file.content).length) }),
     modifiedTime: '2026-11-01T10:00:00.000Z',
     createdTime: '2026-11-01T09:00:00.000Z',
     ...(file.md5Checksum === undefined ? {} : { md5Checksum: file.md5Checksum }),
@@ -76,7 +106,7 @@ export function fakeDrive(initial: FakeFile[] = []) {
       const file = files.get(id);
       if (!file) return json(404, driveError(404, 'notFound').body);
       if (url.searchParams.get('alt') === 'media') {
-        return new Response(file.content ?? '', { status: 200 });
+        return new Response(file.bytes ?? file.content ?? '', { status: 200 });
       }
       return json(200, resource(file));
     }
@@ -102,22 +132,87 @@ export function fakeDrive(initial: FakeFile[] = []) {
     return json(200, { files: page.map(resource), ...next });
   };
 
-  const fetch = (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  const write = (
+    method: string,
+    url: URL,
+    headers: Record<string, string>,
+    body: Uint8Array<ArrayBuffer>,
+  ) => {
+    const upload = /^\/upload\/drive\/v3\/files(?:\/([^/]+))?$/.exec(url.pathname);
+    if (upload) {
+      const parts = parseMultipart(body, headers['content-type'] ?? '');
+      const meta = parts.metadata as {
+        name?: string;
+        parents?: string[];
+        appProperties?: Record<string, string>;
+      };
+      if (method === 'PATCH') {
+        const file = files.get(decodeURIComponent(upload[1] ?? ''));
+        if (!file) return json(404, driveError(404, 'notFound').body);
+        Object.assign(file, {
+          bytes: parts.bytes,
+          mimeType: parts.mimeType,
+          appProperties: meta.appProperties,
+        });
+        return json(200, resource(file));
+      }
+      const file: FakeFile = {
+        id: `new-${String(nextId++)}`,
+        name: meta.name ?? '',
+        parents: meta.parents ?? [],
+        mimeType: parts.mimeType,
+        bytes: parts.bytes,
+        ...(meta.appProperties ? { appProperties: meta.appProperties } : {}),
+      };
+      files.set(file.id, file);
+      return json(200, resource(file));
+    }
+    if (method === 'POST' && url.pathname === '/drive/v3/files') {
+      const meta = JSON.parse(new TextDecoder().decode(body)) as {
+        name: string;
+        mimeType: string;
+        parents: string[];
+      };
+      const file: FakeFile = {
+        id: `new-${String(nextId++)}`,
+        name: meta.name,
+        parents: meta.parents,
+        mimeType: meta.mimeType,
+      };
+      files.set(file.id, file);
+      return json(200, resource(file));
+    }
+    return json(404, driveError(404).body);
+  };
+
+  const fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
     );
     const headers = Object.fromEntries(new Headers(init?.headers).entries());
-    requests.push({ method: init?.method ?? 'GET', url, headers });
-    const index = queued.findIndex((entry) => entry.match.test(url.href));
-    if (index >= 0) {
-      const reply = queued.splice(index, 1)[0]?.reply ?? new Error('fake Drive queue empty');
-      if (reply instanceof Error) return Promise.reject(reply);
-      return Promise.resolve(json(reply.status, reply.body ?? {}, reply.headers));
+    const method = init?.method ?? 'GET';
+    const body =
+      init?.body == null ? undefined : new Uint8Array(await new Response(init.body).arrayBuffer());
+    requests.push({ method, url, headers, ...(body ? { body } : {}) });
+    const index = queued.findIndex((entry) => entry.match.test(url.pathname + url.search));
+    const queuedEntry = index >= 0 ? queued.splice(index, 1)[0] : undefined;
+    if (queuedEntry && !queuedEntry.apply) {
+      const { reply } = queuedEntry;
+      if (reply instanceof Error) throw reply;
+      return json(reply.status, reply.body ?? {}, reply.headers);
     }
     if (headers.authorization !== `Bearer ${state.validToken}`) {
-      return Promise.resolve(json(401, driveError(401, 'authError').body));
+      return json(401, driveError(401, 'authError').body);
     }
-    return Promise.resolve(route(url));
+    const response =
+      method === 'GET' ? route(url) : write(method, url, headers, body ?? new Uint8Array());
+    if (queuedEntry) {
+      // Applied, but the answer is lost: the caller sees the failure.
+      const { reply } = queuedEntry;
+      if (reply instanceof Error) throw reply;
+      return json(reply.status, reply.body ?? {}, reply.headers);
+    }
+    return response;
   };
 
   return {
@@ -125,9 +220,13 @@ export function fakeDrive(initial: FakeFile[] = []) {
     files,
     requests,
     state,
-    /** The next request whose URL matches gets these replies, one per request. */
+    /** The next request whose path and query match gets these replies, one per request. */
     failNext(match: RegExp, ...replies: FakeDriveReply[]) {
-      for (const reply of replies) queued.push({ match, reply });
+      for (const reply of replies) queued.push({ match, reply, apply: false });
+    },
+    /** The next matching request is carried out, but answers with this failure. */
+    failAfterApply(match: RegExp, reply: FakeDriveReply) {
+      queued.push({ match, reply, apply: true });
     },
   };
 }
