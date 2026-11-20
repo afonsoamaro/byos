@@ -26,6 +26,8 @@ export type {
   ResumableSession,
   StorageProvider,
 } from './provider.js';
+export { PathResolver, normalizePath } from './path-resolver.js';
+export type { PathResolverOptions } from './path-resolver.js';
 export type { FileRef } from './refs.js';
 export { isRetryable, retry } from './retry.js';
 export type { RetryOptions } from './retry.js';
