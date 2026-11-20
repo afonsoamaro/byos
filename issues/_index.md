@@ -17,7 +17,7 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 | FN-00b | Git init, GitHub repo and issues | done | FN-00 | |
 | FN-01 | Core contract: provider interface, types and errors | done | FN-00 | sim |
 | FN-02 | Core path resolver | done | FN-01 | |
-| FN-03 | Drive OAuth: PKCE, code exchange and refresh | todo | FN-01 | sim |
+| FN-03 | Drive OAuth: PKCE, code exchange and refresh | done | FN-01 | sim |
 | FN-04 | Drive provider: list, stat, get and error mapping | todo | FN-02, FN-03 | |
 | FN-05 | Drive provider: mkdir and simple upload | todo | FN-04 | |
 | FN-06 | Drive provider: resumable upload | todo | FN-05 | |
