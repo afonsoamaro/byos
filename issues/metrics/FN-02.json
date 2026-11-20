@@ -1,0 +1,28 @@
+{
+  "issue": "FN-02",
+  "app": "byos",
+  "branch": "feat/FN-02-path-resolver",
+  "attribution": "approximate",
+  "attribution_note": "The collector attributed only the last minutes to the branch; earlier implementation turns carry another branch label, so cost and time are understated.",
+  "verdict": "pass",
+  "score": 96,
+  "dimensions": { "scope": 25, "tests": 18, "security": 15, "reuse": 15, "architecture": 10, "guidelines": 9, "discipline": 4 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/core/src/path-resolver.ts", "what": "Default lookup pagination had no test", "fixed": true },
+    { "dim": "tests", "severity": "low", "file": "packages/core/test/path-resolver.test.ts", "what": "Restart-once was not asserted by lookup count", "fixed": true },
+    { "dim": "guidelines", "severity": "low", "file": "packages/core/src/path-resolver.ts", "what": "NFC name filter runs twice with the default lookup; kept on purpose for injected lookups, now commented", "fixed": true },
+    { "dim": "discipline", "severity": "low", "file": "issues/FN-02-core-path-resolver.md", "what": "Restart on any NotFoundError from a cached prefix is a recorded, safe superset of the plan", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 1.29,
+    "verification_usd": 1.14,
+    "total_usd": 2.43,
+    "tokens": { "input": 74, "output": 29325, "cache_read": 7652826, "cache_creation": 144769, "thinking": 3025 }
+  },
+  "time": { "wall_clock_min": 4, "active_min": 4 },
+  "interactions": { "user_messages": 3, "assistant_turns": 20 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-20T04:16:08Z"
+}
