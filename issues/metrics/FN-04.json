@@ -1,0 +1,28 @@
+{
+  "issue": "FN-04",
+  "app": "byos",
+  "branch": "feat/FN-04-drive-read",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 93,
+  "dimensions": { "scope": 24, "tests": 18, "security": 15, "reuse": 14, "architecture": 9, "guidelines": 9, "discipline": 4 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/drive/test/drive/errors.test.ts", "what": "Message test did not check error.cause; 503 case did not count attempts", "fixed": true },
+    { "dim": "scope", "severity": "low", "file": "packages/drive/src/drive-provider.ts", "what": "pageSize had no lower bound", "fixed": true },
+    { "dim": "discipline", "severity": "low", "file": "packages/core/src/errors.ts", "what": "Owner-approved core change (ProviderError.retryable) was not reflected in SPECS.md", "fixed": true },
+    { "dim": "guidelines", "severity": "low", "file": "issues/FN-04-drive-read-operations.md", "what": "Execution Record alluded to private maintainer notes", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/drive/src/drive-provider.ts", "what": "Parent check repeated on every list page", "fixed": true }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 6.09,
+    "verification_usd": 1.62,
+    "total_usd": 7.71,
+    "tokens": { "input": 110, "output": 74978, "cache_read": 16800306, "cache_creation": 687063, "thinking": 7829 }
+  },
+  "time": { "wall_clock_min": 81, "active_min": 5 },
+  "interactions": { "user_messages": 4, "assistant_turns": 33 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-20T17:52:44Z"
+}

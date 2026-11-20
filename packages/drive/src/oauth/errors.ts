@@ -47,14 +47,5 @@ export function mapTokenError(
       reason: 'invalid-grant',
     });
   }
-  return new ProviderError(`Google OAuth rejected the request: ${code}`);
-}
-
-/**
- * A failed `fetch` (network down, DNS). No `cause`: a runtime's fetch error can carry the
- * request, URL included, in its cause chain.
- */
-export function networkError(error: unknown): ProviderError {
-  const name = error instanceof Error ? error.name : 'Error';
-  return new ProviderError(`network error contacting Google OAuth (${name})`);
+  return new ProviderError(`Google OAuth rejected the request: ${code}`, { retryable: false });
 }

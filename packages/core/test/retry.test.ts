@@ -86,6 +86,7 @@ describe('retry', () => {
     new ConflictError('exists'),
     new PermissionError('forbidden'),
     new ProviderError('expired session', { code: 'UPLOAD_SESSION_EXPIRED' }),
+    new ProviderError('bad request', { retryable: false }),
   ])('does not retry %s and rethrows it unchanged', async (error) => {
     const fn = failing(error);
     await expect(retry(fn)).rejects.toBe(error);

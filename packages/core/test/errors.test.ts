@@ -49,6 +49,12 @@ describe('error codes', () => {
     );
   });
 
+  it('ProviderError is retryable unless told otherwise or the session expired', () => {
+    expect(new ProviderError('x').retryable).toBe(true);
+    expect(new ProviderError('x', { retryable: false }).retryable).toBe(false);
+    expect(new ProviderError('x', { code: 'UPLOAD_SESSION_EXPIRED' }).retryable).toBe(false);
+  });
+
   it('keeps reason, retryAfterMs and cause', () => {
     const cause = new Error('underlying');
     const auth = new AuthError('expired', { reason: 'testing-mode-expiry-suspected', cause });

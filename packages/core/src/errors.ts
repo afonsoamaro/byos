@@ -103,15 +103,23 @@ export class QuotaExceededError extends ByosError {
 export class ProviderError extends ByosError {
   override readonly name = 'ProviderError';
   readonly code: 'PROVIDER_ERROR' | 'UPLOAD_SESSION_EXPIRED';
+  /**
+   * Whether repeating the same request can succeed: true for outages and network failures,
+   * false for a request the provider rejected as such (a 4xx). Default: true, except for an
+   * expired upload session, which must restart from zero.
+   */
+  readonly retryable: boolean;
 
   constructor(
     message: string,
     options: ByosErrorOptions & {
       readonly code?: 'PROVIDER_ERROR' | 'UPLOAD_SESSION_EXPIRED';
+      readonly retryable?: boolean;
     } = {},
   ) {
     super(message, options);
     this.code = options.code ?? 'PROVIDER_ERROR';
+    this.retryable = options.retryable ?? this.code !== 'UPLOAD_SESSION_EXPIRED';
   }
 }
 
