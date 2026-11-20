@@ -1,0 +1,28 @@
+{
+  "issue": "FN-01",
+  "app": "byos",
+  "branch": "feat/FN-01-core-contract",
+  "attribution": "approximate",
+  "attribution_note": "The collector attributed only the last minutes to the branch; most implementation turns were recorded under another branch label, so cost and time are understated.",
+  "verdict": "pass",
+  "score": 94,
+  "dimensions": { "scope": 24, "tests": 18, "security": 15, "reuse": 14, "architecture": 9, "guidelines": 10, "discipline": 4 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/core/test/memory-provider.test.ts", "what": "Some fake rules had no test (move with no parent or name, overwrite over a folder, delete of the root)", "fixed": true },
+    { "dim": "discipline", "severity": "low", "file": "packages/core/src/testing/memory-provider.ts", "what": "Empty path segments are dropped instead of raising; undeclared deviation, now recorded", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/core/src/testing/memory-provider.ts", "what": "Fake is ~380 lines; move had no cycle check and a trashed item could not be deleted for good", "fixed": true },
+    { "dim": "guidelines", "severity": "low", "file": "packages/core/src/errors.ts", "what": "Error name from new.target.name breaks under minification; now a literal per class", "fixed": true }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 3.2,
+    "verification_usd": 1.42,
+    "total_usd": 4.63,
+    "tokens": { "input": 114, "output": 84245, "cache_read": 11699127, "cache_creation": 242920, "thinking": 5915 }
+  },
+  "time": { "wall_clock_min": 6, "active_min": 6 },
+  "interactions": { "user_messages": 4, "assistant_turns": 36 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-20T00:09:51Z"
+}
