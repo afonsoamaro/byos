@@ -2,7 +2,8 @@ import { AuthError, ProviderError, type StoredToken } from '@byos/core';
 import { z } from 'zod';
 
 import { REVOKE_URL, TOKEN_URL } from './constants.js';
-import { mapTokenError, networkError, type TokenErrorContext } from './errors.js';
+import { networkError } from '../http-errors.js';
+import { mapTokenError, type TokenErrorContext } from './errors.js';
 
 type Fetch = typeof fetch;
 
@@ -46,7 +47,7 @@ async function post(
       body: new URLSearchParams(params).toString(),
     });
   } catch (error) {
-    throw networkError(error);
+    throw networkError(error, 'Google OAuth');
   }
 }
 

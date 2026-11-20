@@ -142,6 +142,12 @@ describe('TokenManager', () => {
     );
   });
 
+  it('does not retry a client the token endpoint rejects', async () => {
+    const { google, manager } = setup(-1000, [{ status: 401, body: { error: 'invalid_client' } }]);
+    await expect(manager.getAccessToken()).rejects.toThrow(/invalid_client/);
+    expect(google.requests).toHaveLength(1);
+  });
+
   it('does not retry invalid_grant', async () => {
     const { google, manager } = setup(-1000, [{ status: 400, body: { error: 'invalid_grant' } }]);
     await expect(manager.getAccessToken()).rejects.toBeInstanceOf(AuthError);

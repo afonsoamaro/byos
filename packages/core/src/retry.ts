@@ -28,7 +28,8 @@ export interface RetryOptions {
 
 /**
  * Whether retrying can help. Quota, auth, missing, conflicting and forbidden files fail the
- * same way every time, and an expired upload session must restart from zero instead.
+ * same way every time; a ProviderError says so itself (`retryable`), which is false for a
+ * rejected request and for an expired upload session, which must restart from zero instead.
  */
 export function isRetryable(error: unknown): boolean {
   if (
@@ -40,7 +41,7 @@ export function isRetryable(error: unknown): boolean {
   ) {
     return false;
   }
-  if (error instanceof ProviderError) return error.code !== 'UPLOAD_SESSION_EXPIRED';
+  if (error instanceof ProviderError) return error.retryable;
   return true;
 }
 

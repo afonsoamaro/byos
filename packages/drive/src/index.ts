@@ -13,3 +13,6 @@ export { exchangeCode, mergeReconnect, refreshToken, revokeToken } from './oauth
 export type { ExchangeCodeOptions, RefreshTokenOptions } from './oauth/token-client.js';
 export { TokenManager } from './oauth/token-manager.js';
 export type { TokenManagerOptions } from './oauth/token-manager.js';
+export { DriveProvider } from './drive-provider.js';
+export type { DriveProviderOptions } from './drive-provider.js';
+export { escapeQueryValue } from './api/query.js';

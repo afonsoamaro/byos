@@ -104,7 +104,7 @@ A consent screen left in "Testing" caps the app at 100 test users and **expires 
 - `StorageProvider` interface: `list`, `stat`, `get`, `put`, `mkdir`, `move`, `copy`, `delete`.
 - References are **IDs first**. Every result carries the provider file ID; consumers persist IDs, not paths. Path-based calls (`{ path: "a/b/c.jpg" }`) are resolved to IDs by a `PathResolver` with an in-memory cache that invalidates on `NotFound`.
 - Bodies are Web `ReadableStream<Uint8Array>` / `Uint8Array` / `Blob`, not Node streams, so core stays runtime-agnostic.
-- Typed errors: `NotFoundError`, `ConflictError`, `PermissionError`, `AuthError` (with a `reason`, including `testing-mode-expiry-suspected`), `RateLimitError`, `QuotaExceededError`, `ProviderError` (wraps the rest). Every error carries a stable `code` string for CLI JSON output.
+- Typed errors: `NotFoundError`, `ConflictError`, `PermissionError`, `AuthError` (with a `reason`, including `testing-mode-expiry-suspected`), `RateLimitError`, `QuotaExceededError`, `ProviderError` (wraps the rest, with `retryable` telling a transient failure from a rejected request). Every error carries a stable `code` string for CLI JSON output.
 - `FileStat`: `id`, `name`, `parents`, `isFolder`, `size`, `mimeType`, `modifiedAt`, `createdAt`, `md5` (provider-native when available), `sha256` (BYOS-written), `appProperties`.
 - Retry helper: exponential backoff with full jitter, bounded attempts, honoring `Retry-After`; used by providers, not by consumers.
 - No sync primitives: no cursor, no change feed, no tombstone types.
