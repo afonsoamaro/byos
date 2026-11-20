@@ -15,7 +15,7 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 |-------|------|--------|--------------|------------|
 | FN-00 | Monorepo scaffold, check and CI | done | none | |
 | FN-00b | Git init, GitHub repo and issues | done | FN-00 | |
-| FN-01 | Core contract: provider interface, types and errors | todo | FN-00 | sim |
+| FN-01 | Core contract: provider interface, types and errors | done | FN-00 | sim |
 | FN-02 | Core path resolver | todo | FN-01 | |
 | FN-03 | Drive OAuth: PKCE, code exchange and refresh | todo | FN-01 | sim |
 | FN-04 | Drive provider: list, stat, get and error mapping | todo | FN-02, FN-03 | |

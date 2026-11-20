@@ -13,12 +13,19 @@ const options = {
   logLevel: 'silent',
 } satisfies BuildOptions;
 
-const entry = (pkg: string) =>
-  fileURLToPath(new URL(`../packages/${pkg}/dist/index.js`, import.meta.url));
+// Every public entry point of the Node-free packages, as `<package>/<path inside dist>`.
+const ENTRIES = ['core/index', 'core/testing/index', 'drive/index'];
 
-describe('core and drive bundle for the browser', () => {
-  it.each(['core', 'drive'])('%s has no Node imports', async (pkg) => {
-    const result = await build({ ...options, entryPoints: [entry(pkg)] });
+const entry = (name: string) => {
+  const [pkg, ...rest] = name.split('/');
+  return fileURLToPath(
+    new URL(`../packages/${pkg ?? ''}/dist/${rest.join('/')}.js`, import.meta.url),
+  );
+};
+
+describe('core and drive entry points bundle for the browser', () => {
+  it.each(ENTRIES)('%s has no Node imports', async (name) => {
+    const result = await build({ ...options, entryPoints: [entry(name)] });
     expect(result.errors).toEqual([]);
   });
 
