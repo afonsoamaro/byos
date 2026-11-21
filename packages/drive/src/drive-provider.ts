@@ -4,7 +4,6 @@ import {
   PathResolver,
   ProviderError,
   normalizePath,
-  retry,
   type ByosEvents,
   type FileRef,
   type FileStat,
@@ -25,10 +24,19 @@ import {
   filesUrl,
   listResponseSchema,
   toFileStat,
-  uploadUrl,
 } from './api/files.js';
+import { FolderMaker, createWithReconcile, type CreateContext } from './api/creates.js';
 import { mimeTypeFor } from './api/mime.js';
-import { BYOS_METADATA_VERSION, buildMultipart, readBody, sha256Hex } from './api/upload.js';
+import {
+  CHUNK_ALIGN,
+  DEFAULT_CHUNK_SIZE,
+  resumableUpload,
+  resumeSession,
+  type ResumableContext,
+  type ResumeUploadOptions,
+} from './api/resumable.js';
+import { simpleUpload } from './api/simple-upload.js';
+import { BYOS_METADATA_VERSION, SIMPLE_UPLOAD_LIMIT, readBody, sha256Hex } from './api/upload.js';
 import { childByNameQuery, childrenQuery } from './api/query.js';
 import type { TokenManager } from './oauth/token-manager.js';
 
@@ -42,7 +50,11 @@ export interface DriveProviderOptions {
   readonly retry?: RetryOptions;
   /** Bound of the path cache. Default 10,000 entries. */
   readonly cacheEntries?: number;
+  /** Resumable upload chunk: a positive multiple of 256 KiB. Default 8 MiB. */
+  readonly chunkSize?: number;
 }
+
+const fatal = (message: string) => new ProviderError(message, { retryable: false });
 
 const notImplemented = (operation: string) =>
   Promise.reject(new ProviderError(`${operation} is not implemented yet`));
@@ -54,9 +66,9 @@ export class DriveProvider implements StorageProvider {
   readonly #resolver: PathResolver;
   readonly #root: string;
   readonly #events: ByosEvents | undefined;
-  readonly #retry: RetryOptions | undefined;
-  /** In-flight folder creations by `parentId/name`, so concurrent mkdirs make one folder. */
-  readonly #ensuring = new Map<string, Promise<FileStat>>();
+  readonly #resumable: ResumableContext;
+  readonly #creates: CreateContext;
+  readonly #folders: FolderMaker;
 
   constructor(options: DriveProviderOptions) {
     this.#client = new DriveClient({
@@ -65,9 +77,25 @@ export class DriveProvider implements StorageProvider {
       ...(options.events === undefined ? {} : { events: options.events }),
       ...(options.retry === undefined ? {} : { retry: options.retry }),
     });
+    const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
+    if (!Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize % CHUNK_ALIGN !== 0) {
+      throw fatal('chunkSize must be a positive multiple of 256 KiB');
+    }
+    this.#resumable = {
+      client: this.#client,
+      chunkSize,
+      events: options.events,
+      retry: options.retry,
+    };
+    this.#creates = {
+      client: this.#client,
+      findChildren: (parentId, name) => this.#findChildren(parentId, name),
+      events: options.events,
+      retry: options.retry,
+    };
+    this.#folders = new FolderMaker(this.#creates);
     this.#root = options.root ?? 'root';
     this.#events = options.events;
-    this.#retry = options.retry;
     this.#resolver = new PathResolver(this, {
       root: this.#root,
       ...(options.cacheEntries === undefined ? {} : { maxEntries: options.cacheEntries }),
@@ -135,17 +163,30 @@ export class DriveProvider implements StorageProvider {
     });
   }
 
-  /** Simple multipart upload up to 5 MiB, writing `byosSha256` and `byosVersion`. */
+  /**
+   * Uploads a file, writing `byosSha256` and `byosVersion`: a multipart upload up to 5 MiB, a
+   * resumable session above it (which needs `size` and `sha256`).
+   */
   put(options: PutOptions): Promise<FileStat> {
     return this.#withRef(options.parent, async (parentId) => {
-      const bytes = await readBody(options.body, options.size);
-      const sha256 = await sha256Hex(bytes);
-      if (options.sha256 !== undefined && options.sha256.toLowerCase() !== sha256) {
-        throw new ProviderError('the sha256 passed to put does not match the body', {
-          retryable: false,
-        });
-      }
+      const size =
+        options.size ??
+        (options.body instanceof Uint8Array
+          ? options.body.length
+          : options.body instanceof Blob
+            ? options.body.size
+            : undefined);
+      if (size === undefined) throw fatal('the size is required for a stream body');
       const mimeType = options.mimeType ?? mimeTypeFor(options.name);
+      const large = size > SIMPLE_UPLOAD_LIMIT;
+      if (large && options.sha256 === undefined) {
+        throw fatal('sha256 is required for uploads over 5 MiB');
+      }
+      const bytes = large ? undefined : await readBody(options.body, size);
+      const sha256 = bytes ? await sha256Hex(bytes) : (options.sha256 ?? '').toLowerCase();
+      if (options.sha256 !== undefined && options.sha256.toLowerCase() !== sha256) {
+        throw fatal('the sha256 passed to put does not match the body');
+      }
       const appProperties = {
         ...options.appProperties,
         byosSha256: sha256,
@@ -154,41 +195,34 @@ export class DriveProvider implements StorageProvider {
 
       const [existing, ...others] = await this.#findChildren(parentId, options.name);
       if (others.length > 0) throw new ConflictError(`more than one item named ${options.name}`);
-      let stat: FileStat;
-      if (existing) {
-        if (existing.isFolder) throw new ConflictError(`${options.name} is a folder`);
-        if (!options.overwrite) throw new ConflictError(`${options.name} already exists`);
-        const { body, contentType } = buildMultipart({ mimeType, appProperties }, bytes, mimeType);
-        stat = toFileStat(
-          await this.#client.json(
-            'drive.put',
-            uploadUrl(existing.id, { uploadType: 'multipart', fields: FILE_FIELDS }),
-            driveFileSchema,
-            { method: 'PATCH', headers: { 'content-type': contentType }, body },
-          ),
-        );
-      } else {
-        const { body, contentType } = buildMultipart(
-          { name: options.name, parents: [parentId], mimeType, appProperties },
-          bytes,
+      if (existing?.isFolder) throw new ConflictError(`${options.name} is a folder`);
+      if (existing && !options.overwrite) throw new ConflictError(`${options.name} already exists`);
+
+      if (!bytes) {
+        return resumableUpload(this.#resumable, {
+          ...(existing ? { existingId: existing.id } : {}),
+          metadata: existing
+            ? { mimeType, appProperties }
+            : { name: options.name, parents: [parentId], mimeType, appProperties },
           mimeType,
-        );
-        stat = await this.#createWithReconcile(
-          'drive.put',
-          parentId,
-          options.name,
-          async () =>
-            toFileStat(
-              await this.#client.jsonOnce(
-                'drive.put',
-                uploadUrl(undefined, { uploadType: 'multipart', fields: FILE_FIELDS }),
-                driveFileSchema,
-                { method: 'POST', headers: { 'content-type': contentType }, body },
-              ),
-            ),
-          (found) => !found.isFolder && found.sha256 === sha256,
-        );
+          name: options.name,
+          size,
+          sha256,
+          body: options.body,
+          ...(options.onResumableSession ? { onResumableSession: options.onResumableSession } : {}),
+        });
       }
+      const upload = { parentId, name: options.name, bytes, mimeType, appProperties };
+      const stat = existing
+        ? await simpleUpload(this.#client, { ...upload, existingId: existing.id })
+        : await createWithReconcile(
+            this.#creates,
+            'drive.put',
+            parentId,
+            options.name,
+            () => simpleUpload(this.#client, upload),
+            (found) => !found.isFolder && found.sha256 === sha256,
+          );
       this.#events?.onUploadProgress?.({
         name: options.name,
         bytesConfirmed: bytes.length,
@@ -198,16 +232,23 @@ export class DriveProvider implements StorageProvider {
     });
   }
 
+  /** Continues a resumable upload from the offset Drive confirmed, even in a new process. */
+  resumeUpload(options: ResumeUploadOptions): Promise<FileStat> {
+    return resumeSession(this.#resumable, options);
+  }
+
   /** Idempotent: returns the existing folder; `parents` creates missing segments of a path. */
   async mkdir(options: MkdirOptions): Promise<FileStat> {
     if (options.parents && options.parent.path !== undefined) {
       let parentId = this.#root;
       for (const segment of normalizePath(options.parent.path)) {
-        parentId = (await this.#ensureFolder(parentId, segment)).id;
+        parentId = (await this.#folders.ensure(parentId, segment)).id;
       }
-      return this.#ensureFolder(parentId, options.name);
+      return this.#folders.ensure(parentId, options.name);
     }
-    return this.#withRef(options.parent, (parentId) => this.#ensureFolder(parentId, options.name));
+    return this.#withRef(options.parent, (parentId) =>
+      this.#folders.ensure(parentId, options.name),
+    );
   }
 
   move(): Promise<FileStat> {
@@ -238,70 +279,6 @@ export class DriveProvider implements StorageProvider {
       if (error instanceof NotFoundError) return undefined;
       throw error;
     }
-  }
-
-  #ensureFolder(parentId: string, name: string): Promise<FileStat> {
-    const key = `${parentId}/${name}`;
-    let pending = this.#ensuring.get(key);
-    if (!pending) {
-      pending = this.#findOrCreateFolder(parentId, name).finally(() => {
-        this.#ensuring.delete(key);
-      });
-      this.#ensuring.set(key, pending);
-    }
-    return pending;
-  }
-
-  async #findOrCreateFolder(parentId: string, name: string): Promise<FileStat> {
-    const [existing, ...others] = await this.#findChildren(parentId, name);
-    if (others.length > 0) throw new ConflictError(`more than one item named ${name}`);
-    if (existing) {
-      if (!existing.isFolder) throw new ConflictError(`${name} exists and is not a folder`);
-      return existing;
-    }
-    return this.#createWithReconcile(
-      'drive.mkdir',
-      parentId,
-      name,
-      async () =>
-        toFileStat(
-          await this.#client.jsonOnce(
-            'drive.mkdir',
-            filesUrl(undefined, { fields: FILE_FIELDS }),
-            driveFileSchema,
-            {
-              method: 'POST',
-              headers: { 'content-type': 'application/json; charset=UTF-8' },
-              body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [parentId] }),
-            },
-          ),
-        ),
-      (found) => found.isFolder,
-    );
-  }
-
-  /**
-   * Creates are not idempotent: if Drive created the item but the response was lost, a plain
-   * retry would make a duplicate. So from the second attempt on, look for it first.
-   */
-  #createWithReconcile(
-    operation: string,
-    parentId: string,
-    name: string,
-    create: () => Promise<FileStat>,
-    matches: (found: FileStat) => boolean,
-  ): Promise<FileStat> {
-    const onRetry = this.#events?.onRetry;
-    return retry(
-      async (attempt) => {
-        if (attempt > 1) {
-          const hit = (await this.#findChildren(parentId, name)).find(matches);
-          if (hit) return hit;
-        }
-        return create();
-      },
-      { operation, ...(onRetry === undefined ? {} : { onRetry }), ...this.#retry },
-    );
   }
 
   async #findChildren(parentId: string, name: string): Promise<FileStat[]> {

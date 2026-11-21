@@ -71,8 +71,27 @@ export function fakeDrive(initial: FakeFile[] = []) {
     ]),
   );
   const requests: DriveRequest[] = [];
-  const queued: { match: RegExp; reply: FakeDriveReply; apply: boolean }[] = [];
+  const queued: {
+    match: RegExp | ((request: DriveRequest) => boolean);
+    reply: FakeDriveReply;
+    apply: boolean;
+  }[] = [];
   let nextId = 1;
+  interface UploadSession {
+    metadata: {
+      name?: string;
+      parents?: string[];
+      mimeType?: string;
+      appProperties?: Record<string, string>;
+    };
+    mimeType: string;
+    size: number;
+    existingId?: string;
+    received: Uint8Array<ArrayBuffer>;
+    fileId?: string;
+  }
+  const sessions = new Map<string, UploadSession>();
+  const control = { confirmShort: undefined as number | undefined, expired: false };
   const state = { validToken: 'access-1' };
 
   const resource = (file: FakeFile) => ({
@@ -132,12 +151,99 @@ export function fakeDrive(initial: FakeFile[] = []) {
     return json(200, { files: page.map(resource), ...next });
   };
 
+  const resumable = (
+    method: string,
+    url: URL,
+    headers: Record<string, string>,
+    body: Uint8Array<ArrayBuffer>,
+  ): Response | undefined => {
+    const uploadId = url.searchParams.get('upload_id');
+    if (uploadId === null) {
+      if (url.searchParams.get('uploadType') !== 'resumable') return undefined;
+      const metadata = JSON.parse(new TextDecoder().decode(body)) as UploadSession['metadata'];
+      const existing = /\/files\/([^/]+)$/.exec(url.pathname)?.[1];
+      const id = `SECRET-${String(nextId++)}`;
+      sessions.set(id, {
+        metadata,
+        mimeType: headers['x-upload-content-type'] ?? 'application/octet-stream',
+        size: Number(headers['x-upload-content-length']),
+        ...(existing === undefined ? {} : { existingId: decodeURIComponent(existing) }),
+        received: new Uint8Array(0),
+      });
+      return new Response(null, {
+        status: 200,
+        headers: {
+          location: `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=${id}`,
+        },
+      });
+    }
+    const session = sessions.get(uploadId);
+    if (!session || control.expired) return json(404, driveError(404, 'notFound').body);
+    const finished = () => {
+      const file = session.fileId === undefined ? undefined : files.get(session.fileId);
+      return file ? json(200, resource(file)) : undefined;
+    };
+    const incomplete = () =>
+      new Response(null, {
+        status: 308,
+        headers:
+          session.received.length > 0
+            ? { range: `bytes=0-${String(session.received.length - 1)}` }
+            : {},
+      });
+    const range = headers['content-range'] ?? '';
+    if (/^bytes \*\/\d+$/.test(range)) return finished() ?? incomplete();
+    const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(range);
+    if (
+      !match ||
+      Number(match[1]) !== session.received.length ||
+      Number(match[2]) - Number(match[1]) + 1 !== body.length
+    ) {
+      return json(400, driveError(400, 'badContentRange').body);
+    }
+    let kept = body;
+    if (control.confirmShort !== undefined) {
+      kept = body.slice(0, control.confirmShort);
+      control.confirmShort = undefined;
+    }
+    const merged = new Uint8Array(session.received.length + kept.length);
+    merged.set(session.received);
+    merged.set(kept, session.received.length);
+    session.received = merged;
+    if (session.received.length < session.size) return incomplete();
+    const meta = session.metadata;
+    if (session.existingId !== undefined) {
+      const file = files.get(session.existingId);
+      if (!file) return json(404, driveError(404, 'notFound').body);
+      Object.assign(file, {
+        bytes: session.received,
+        mimeType: session.mimeType,
+        appProperties: meta.appProperties,
+      });
+      session.fileId = file.id;
+    } else {
+      const file: FakeFile = {
+        id: `new-${String(nextId++)}`,
+        name: meta.name ?? '',
+        parents: meta.parents ?? [],
+        mimeType: session.mimeType,
+        bytes: session.received,
+        ...(meta.appProperties ? { appProperties: meta.appProperties } : {}),
+      };
+      files.set(file.id, file);
+      session.fileId = file.id;
+    }
+    return finished();
+  };
+
   const write = (
     method: string,
     url: URL,
     headers: Record<string, string>,
     body: Uint8Array<ArrayBuffer>,
   ) => {
+    const viaSession = resumable(method, url, headers, body);
+    if (viaSession) return viaSession;
     const upload = /^\/upload\/drive\/v3\/files(?:\/([^/]+))?$/.exec(url.pathname);
     if (upload) {
       const parts = parseMultipart(body, headers['content-type'] ?? '');
@@ -194,7 +300,12 @@ export function fakeDrive(initial: FakeFile[] = []) {
     const body =
       init?.body == null ? undefined : new Uint8Array(await new Response(init.body).arrayBuffer());
     requests.push({ method, url, headers, ...(body ? { body } : {}) });
-    const index = queued.findIndex((entry) => entry.match.test(url.pathname + url.search));
+    const request = requests[requests.length - 1] as DriveRequest;
+    const index = queued.findIndex((entry) =>
+      entry.match instanceof RegExp
+        ? entry.match.test(url.pathname + url.search)
+        : entry.match(request),
+    );
     const queuedEntry = index >= 0 ? queued.splice(index, 1)[0] : undefined;
     if (queuedEntry && !queuedEntry.apply) {
       const { reply } = queuedEntry;
@@ -224,6 +335,19 @@ export function fakeDrive(initial: FakeFile[] = []) {
     failNext(match: RegExp, ...replies: FakeDriveReply[]) {
       for (const reply of replies) queued.push({ match, reply, apply: false });
     },
+    /** The next request the predicate accepts is carried out, then answers with this failure. */
+    failAfterApplyWhen(match: (request: DriveRequest) => boolean, reply: FakeDriveReply) {
+      queued.push({ match, reply, apply: true });
+    },
+    /** The next resumable chunk keeps (and confirms) only its first `bytes` bytes. */
+    confirmShort(bytes: number) {
+      control.confirmShort = bytes;
+    },
+    /** Every resumable session answers 404 from now on. */
+    expireSessions() {
+      control.expired = true;
+    },
+    sessions,
     /** The next matching request is carried out, but answers with this failure. */
     failAfterApply(match: RegExp, reply: FakeDriveReply) {
       queued.push({ match, reply, apply: true });

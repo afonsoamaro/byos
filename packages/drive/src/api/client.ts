@@ -7,7 +7,7 @@ import { mapDriveError } from './errors.js';
 
 /** A request's method, extra headers and body; the body is reused as is on a retry. */
 export interface DriveRequestInit {
-  readonly method?: 'GET' | 'POST' | 'PATCH';
+  readonly method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
   readonly headers?: Readonly<Record<string, string>>;
   readonly body?: Uint8Array<ArrayBuffer> | string;
 }
@@ -101,7 +101,28 @@ export class DriveClient {
     });
   }
 
+  /**
+   * One attempt with the 401 refresh, returning the response whatever its status: for the
+   * resumable protocol, where a 308 is progress, not an error.
+   */
+  rawOnce(operation: string, url: string, init?: DriveRequestInit): Promise<Response> {
+    return this.#exchange(operation, url, 1, init);
+  }
+
   async #send(
+    operation: string,
+    url: string,
+    attempt: number,
+    init?: DriveRequestInit,
+  ): Promise<Response> {
+    const response = await this.#exchange(operation, url, attempt, init);
+    if (!response.ok) {
+      throw mapDriveError(response.status, await readJson(response), response.headers, this.#now());
+    }
+    return response;
+  }
+
+  async #exchange(
     operation: string,
     url: string,
     attempt: number,
@@ -122,9 +143,6 @@ export class DriveClient {
           },
         );
       }
-    }
-    if (!response.ok) {
-      throw mapDriveError(response.status, await readJson(response), response.headers, this.#now());
     }
     return response;
   }

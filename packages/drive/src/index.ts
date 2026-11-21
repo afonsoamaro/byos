@@ -15,5 +15,6 @@ export { TokenManager } from './oauth/token-manager.js';
 export type { TokenManagerOptions } from './oauth/token-manager.js';
 export { DriveProvider } from './drive-provider.js';
 export type { DriveProviderOptions } from './drive-provider.js';
+export type { ResumeUploadOptions } from './api/resumable.js';
 export { escapeQueryValue } from './api/query.js';
 export { mimeTypeFor } from './api/mime.js';

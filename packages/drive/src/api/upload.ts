@@ -1,13 +1,13 @@
 import { ProviderError, type PutBody } from '@byos/core';
 
-/** Above this, or with an unknown size, a file needs the resumable upload. */
+/** Above this, `put` uses the resumable upload (which needs `size` and `sha256`). */
 export const SIMPLE_UPLOAD_LIMIT = 5 * 1024 * 1024;
 /** Version of the metadata format BYOS writes into `appProperties`, not the package version. */
 export const BYOS_METADATA_VERSION = '1';
 
 const tooBig = () =>
   new ProviderError(
-    'files over 5 MiB or of unknown size need the resumable upload, which is not implemented yet',
+    'the simple upload reads at most 5 MiB of known size; larger files use the resumable upload',
     { retryable: false },
   );
 
