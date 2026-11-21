@@ -167,3 +167,25 @@ Don't touch `program.ts`: wiring the store into commands is FN-09.
 
 ## Checkpoint
 - `Checkpoint: sim`, after step 1 (crypto and envelope fixed).
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-08-cli-token-store`, executed 2026-11-21.
+- Step 1 (riskiest) and Checkpoint: `key.ts`, `file-token-store.ts` (AES-256-GCM, versioned envelope `{ v, iv, ct }`, the key name as additional data) and 21 crypto tests passed on the first run, and `pnpm check` was green right after (the Checkpoint).
+- Step 2: `atomic-write.ts` (`writeFileAtomic`: temp file, `sync`, `rename`; `writeFileExclusive`: temp file then a hard link, which fails when the target exists), plus the atomicity and concurrency tests. Step 3: `paths.ts` with `configDir`, `tokensDir` and `dataDir` per platform and the overrides.
+- **Key-source decision**, as recorded in the plan: `BYOS_TOKEN_KEY`, else a key file at `<configDir>/token.key`. The env var never falls back to the file, and a wrong value is an `AuthError`. A damaged key file is an `AuthError` too, never a silent new key.
+- **Windows:** Node can't set an ACL without a shell-out, so the token and key files rely on the default per-user ACL of `%APPDATA%`. Not testable here; documented, and to be repeated in the onboarding docs (FN-18).
+- Mutation proof: removing the additional data from the encrypt and decrypt calls fails exactly the "file copied to another key name" test. Restored (`cmp` equal).
+- Deviations from the plan:
+  - The key file is created with `writeFileExclusive` (temp file plus hard link) instead of `open(..., 'wx')`, because the latter can expose an empty file to a second process that starts at the same moment. A test starts two stores at once and both read each other's tokens.
+  - Key names must start with a letter or digit (`/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/`), so `.` and `..` are refused too.
+  - `BYOS_TOKEN_KEY` is validated with a base64 round trip, because Node's `Buffer.from(text, 'base64')` silently ignores stray characters.
+  - The `atomicHooks` (`beforeRename`) option sits on `FileTokenStoreOptions`, which is how the crash test reaches it.
+- `pnpm check`: build, lint (ESLint 0 warnings, Prettier clean), typecheck and tests green: 303 passed (83 in core, 160 in drive, 35 in cli, 25 in the root suite).
+- After the independent verification (94, no vetoes):
+  - `writeFileExclusive` falls back to an exclusive create when the filesystem has no hard links (FAT, some network shares), and still never replaces. The link function is injectable, so both the fallback and an unrelated failure are tested.
+  - `ensurePrivateDir` also tightens a folder that already existed to `0700` on POSIX (a `--config-dir` pointing at a 0755 folder); the permissions test now checks the config folder too.
+  - `FileTokenStore` uses `tokensDir` from `paths.ts`, so the folder name lives in one place. `tokensDir` defaults the platform to the running one.
+- Final `pnpm check` after the fixes: green, 306 tests (83 in core, 160 in drive, 38 in cli, 25 in the root suite). The first rerun failed lint on a `return` without `await` inside the `try` of the fallback (which would also have removed the temp file before the fallback finished); fixed.
