@@ -1,0 +1,30 @@
+{
+  "issue": "FN-06",
+  "app": "byos",
+  "branch": "feat/FN-06-drive-resumable",
+  "attribution": "approximate",
+  "attribution_note": "The collector counted 14 active minutes on the branch; most of the implementation ran earlier under another branch label, so time is understated.",
+  "verdict": "pass",
+  "score": 93,
+  "dimensions": { "scope": 25, "tests": 17, "security": 15, "reuse": 14, "architecture": 9, "guidelines": 10, "discipline": 3 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "medium", "file": "packages/drive/src/api/resumable.ts", "what": "ReadableStream path of chunks() had no test", "fixed": true },
+    { "dim": "tests", "severity": "low", "file": "packages/drive/src/api/resumable.ts", "what": "Several fatal branches untested (short content, stalls)", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/drive/src/api/resumable.ts", "what": "Stream reads copied the growing buffer on every read; pending can hold about two chunks", "fixed": true },
+    { "dim": "reuse", "severity": "low", "file": "packages/drive/src/api/upload.ts", "what": "Stale 'not implemented' text", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/drive/src/api/resumable.ts", "what": "A status confirming more than the chunk sent would desync the reader; now fatal", "fixed": true },
+    { "dim": "discipline", "severity": "low", "file": "packages/drive/src/api/creates.ts", "what": "Extra file beyond the plan to bring the provider under 300 lines; recorded deviation", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 11.28,
+    "verification_usd": 2.85,
+    "total_usd": 14.13,
+    "tokens": { "input": 208, "output": 156389, "cache_read": 50425235, "cache_creation": 354961, "thinking": 41115 }
+  },
+  "time": { "wall_clock_min": 14, "active_min": 14 },
+  "interactions": { "user_messages": 4, "assistant_turns": 76 },
+  "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+  "verified_at": "2026-11-21T17:39:27Z"
+}

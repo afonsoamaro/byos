@@ -7,7 +7,13 @@ import { fakeDrive, type FakeFile } from './fake-drive.js';
 export const NOW = Date.UTC(2026, 10, 20);
 
 export function setup(
-  options: { files?: FakeFile[]; oauth?: FakeReply[]; events?: ByosEvents; random?: boolean } = {},
+  options: {
+    files?: FakeFile[];
+    oauth?: FakeReply[];
+    events?: ByosEvents;
+    random?: boolean;
+    chunkSize?: number;
+  } = {},
 ) {
   const tokens = new Map<string, StoredToken>([
     [
@@ -46,6 +52,7 @@ export function setup(
     tokens: manager,
     fetch: drive.fetch,
     ...(options.events ? { events: options.events } : {}),
+    ...(options.chunkSize === undefined ? {} : { chunkSize: options.chunkSize }),
     ...(options.random === false ? {} : { retry: { random: () => 0 } }),
   });
   return { provider, drive, google, manager };
