@@ -7,8 +7,8 @@ Functional
 Thin commands over the provider: `byos ls`, `stat`, `get`, `put`, `mkdir`, `mv`, `cp`, `rm`. Their `--json` mode is the contract the bill tracker (a Python app) uses through a subprocess, so the output and exit codes are treated as a public API.
 
 ## User Flow
-1. `byos put ./out/2026-11/nubank.pdf --remote "Bills to Pay/2026-11" --mkdir --json`
-2. Prints `{ "id": "...", "name": "nubank.pdf", "sha256": "...", "size": 123, "path": "Bills to Pay/2026-11/nubank.pdf" }` on stdout, exit 0.
+1. `byos put ./out/2026-11/statement.pdf --remote "Archive/2026-11" --mkdir --json`
+2. Prints `{ "id": "...", "name": "statement.pdf", "sha256": "...", "size": 123, "path": "Archive/2026-11/statement.pdf" }` on stdout, exit 0.
 3. On failure prints `{ "code": "QUOTA_EXCEEDED", "message": "..." }` on stderr, exit non-zero.
 
 ## Requirements

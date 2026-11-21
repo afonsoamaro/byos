@@ -7,7 +7,7 @@ Functional
 Write path for small files and folders: idempotent `mkdir` and `put` with a multipart upload up to 5 MiB, writing BYOS's SHA-256 into the file's `appProperties`.
 
 ## User Flow
-1. Consumer calls `mkdir({ path: "Bills to Pay/2026-11", parents: true })` and gets the folder `FileStat`.
+1. Consumer calls `mkdir({ path: "Archive/2026-11", parents: true })` and gets the folder `FileStat`.
 2. Consumer calls `put({ parent, name, body, sha256 })` and gets the new file's `FileStat`.
 
 ## Requirements

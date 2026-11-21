@@ -94,7 +94,7 @@ A consent screen left in "Testing" caps the app at 100 test users and **expires 
 - As the owner, my connection drops in the middle of a 3 GB video; the next run continues that upload from where it stopped.
 - As the owner, I delete a photo from my PC; the Drive copy stays.
 - As the owner, I run `byos doctor` and it tells me exactly which setup step is missing (API not enabled, wrong redirect, consent screen in Testing).
-- As the bill tracker, I call `byos put ./out/2026-11/nubank.pdf --remote "Bills to Pay/2026-11" --json` and get back the Drive file ID and hash; on failure I get a non-zero exit code and a JSON error, and I retry later without blocking ingestion.
+- As the bill tracker, I call `byos put ./out/2026-11/statement.pdf --remote "Archive/2026-11" --json` and get back the Drive file ID and hash; on failure I get a non-zero exit code and a JSON error, and I retry later without blocking ingestion.
 - As a future app developer, I import `@byos/drive`, pass my client config and a `TokenStore`, and call `put` from React Native without polyfilling Node APIs.
 
 ## Functional Requirements
@@ -140,7 +140,7 @@ Commands:
 ### Bill tracker integration (consumer, not BYOS code)
 
 - The bill tracker calls `byos put` after a PDF is decrypted and organized, in a background task. A failure marks the file "archive pending" and is retried; it never blocks ingestion.
-- Only the decrypted PDF goes to Drive, under `Bills to Pay/<YYYY-MM>/`.
+- Only the decrypted PDF goes to Drive, under `Archive/<YYYY-MM>/`.
 - A one-off backfill script sends existing PDFs, idempotent by the hash the bill tracker already computes.
 - The VPS stays the primary store; Drive is the archive copy (owner decision).
 
