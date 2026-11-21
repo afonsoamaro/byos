@@ -65,3 +65,10 @@ export function uploadUrl(id: string | undefined, params: Record<string, string>
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   return url.toString();
 }
+
+/** `files/<id>/copy` with query parameters. */
+export function copyUrl(id: string, params: Record<string, string>): string {
+  const url = new URL(`${FILES_URL}/${encodeURIComponent(id)}/copy`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}

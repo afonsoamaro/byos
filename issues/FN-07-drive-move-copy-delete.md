@@ -178,3 +178,27 @@ The remaining operations of the full set. v1 has no first consumer for them (own
 
 ## Checkpoint
 - `Checkpoint: nao`
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-07-drive-move-copy-delete`, executed 2026-11-21.
+- Step 1 (riskiest): `storageContract()` (`@byos/core/testing`, framework-free and Node-free, 14 cases) passes on `MemoryProvider` as written, and on `DriveProvider` it failed for exactly the 8 cases that needed `move`, `copy` and `delete` before any Drive code existed.
+- Implementation: `api/relocate.ts` (`move`, `copy`, `remove`), `DriveClient.noContent` (retry, and a 404 on a repeated permanent delete counts as done), `copyUrl` in `api/files.ts`, and the fake's PATCH, copy and DELETE routes plus `foreign` files that answer 403 `appNotAuthorizedToFile`.
+- Mutation proofs (restored, `cmp` equal):
+  - `delete` always sends DELETE: the Drive PATCH test and the contract's "permanent on a trashed file" fail. The contract's "trashes by default" case alone doesn't tell trash from a permanent delete, because `stat` is `undefined` after both; the request-shape test and the trashed-then-permanent case do.
+  - No clash check in `move`: the Drive clash test and the contract's clash case fail.
+- Problems found and fixed while running:
+  - The contract's `copy` case passed a made-up `sha256`, which `DriveProvider.put` rightly refuses (it computes and compares). The case now computes the real hash with Web Crypto.
+  - Three Drive tests failed in a chain with no apparent link: the fake kept the objects of a module-level fixture array, so the first `move` test renamed and re-parented `f1` for the following tests. The fake now copies its initial files.
+- Deviations from the plan:
+  - The stale "not implemented" test in `read-operations.test.ts` was removed, as planned; no `notImplemented` helper remains.
+  - `drive-provider.ts` is 308 lines (the plan said ≤ ~300) even with the three operations in `api/relocate.ts`.
+  - `[assumed]`, first exercised for real in FN-15 and FN-16: the PATCH, copy and DELETE shapes, and that comparing the target parent with `parents[0]` works when the target is Drive's `root` alias (real Drive reports the real root id in `parents`). If a move to the Drive root misbehaves there, normalise the alias with one `stat('root')`.
+- `pnpm check`: build, lint (ESLint 0 warnings, Prettier clean), typecheck and tests green: 269 passed (83 in core, 159 in drive, 2 in cli, 25 in the root suite). `grep -rn "node:\|console\.\|vitest" packages/core/src packages/drive/src` prints nothing.
+- After the independent verification (94, no vetoes):
+  - The contract's `put` case now also checks that the hash round-trips, and the `delete` case is named for what it proves.
+  - The `copy` reconciliation matcher compares the hash when the source has one.
+  - `move` refuses the root (a Drive-side guard with a test; `MemoryProvider` has no such guard).
+- Final `pnpm check` after the fixes: green, 270 tests (83 in core, 160 in drive, 2 in cli, 25 in the root suite).

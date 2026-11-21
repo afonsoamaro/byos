@@ -8,7 +8,10 @@ import {
   type FileRef,
   type FileStat,
   type ListOptions,
+  type CopyOptions,
+  type DeleteOptions,
   type ListResult,
+  type MoveOptions,
   type MkdirOptions,
   type PutOptions,
   type RetryOptions,
@@ -35,6 +38,7 @@ import {
   type ResumableContext,
   type ResumeUploadOptions,
 } from './api/resumable.js';
+import { copy, move, remove, type RelocateContext } from './api/relocate.js';
 import { simpleUpload } from './api/simple-upload.js';
 import { BYOS_METADATA_VERSION, SIMPLE_UPLOAD_LIMIT, readBody, sha256Hex } from './api/upload.js';
 import { childByNameQuery, childrenQuery } from './api/query.js';
@@ -56,9 +60,6 @@ export interface DriveProviderOptions {
 
 const fatal = (message: string) => new ProviderError(message, { retryable: false });
 
-const notImplemented = (operation: string) =>
-  Promise.reject(new ProviderError(`${operation} is not implemented yet`));
-
 /** `StorageProvider` over the Google Drive REST API v3, personal Drive only. */
 export class DriveProvider implements StorageProvider {
   readonly name = 'google-drive';
@@ -69,6 +70,7 @@ export class DriveProvider implements StorageProvider {
   readonly #resumable: ResumableContext;
   readonly #creates: CreateContext;
   readonly #folders: FolderMaker;
+  readonly #relocate: RelocateContext;
 
   constructor(options: DriveProviderOptions) {
     this.#client = new DriveClient({
@@ -95,6 +97,16 @@ export class DriveProvider implements StorageProvider {
     };
     this.#folders = new FolderMaker(this.#creates);
     this.#root = options.root ?? 'root';
+    this.#relocate = {
+      client: this.#client,
+      creates: this.#creates,
+      root: this.#root,
+      withRef: (ref, fn) => this.#withRef(ref, fn),
+      statById: (id) => this.#statById(id),
+      invalidate: (ref) => {
+        if (ref.path !== undefined) this.#resolver.invalidate(ref.path);
+      },
+    };
     this.#events = options.events;
     this.#resolver = new PathResolver(this, {
       root: this.#root,
@@ -251,16 +263,16 @@ export class DriveProvider implements StorageProvider {
     );
   }
 
-  move(): Promise<FileStat> {
-    return notImplemented('move');
+  move(ref: FileRef, options: MoveOptions): Promise<FileStat> {
+    return move(this.#relocate, ref, options);
   }
 
-  copy(): Promise<FileStat> {
-    return notImplemented('copy');
+  copy(ref: FileRef, options: CopyOptions): Promise<FileStat> {
+    return copy(this.#relocate, ref, options);
   }
 
-  delete(): Promise<void> {
-    return notImplemented('delete');
+  delete(ref: FileRef, options?: DeleteOptions): Promise<void> {
+    return remove(this.#relocate, ref, options);
   }
 
   #withRef<T>(ref: FileRef, fn: (id: string) => Promise<T>): Promise<T> {
