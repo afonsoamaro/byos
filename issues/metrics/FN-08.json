@@ -1,0 +1,27 @@
+{
+  "issue": "FN-08",
+  "app": "byos",
+  "branch": "feat/FN-08-cli-token-store",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 94,
+  "dimensions": { "scope": 25, "tests": 19, "security": 14, "reuse": 12, "architecture": 10, "guidelines": 10, "discipline": 4 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "security", "severity": "medium", "file": "packages/cli/src/store/atomic-write.ts", "what": "Key file creation through a hard link had no fallback for filesystems without hard links; fallback added and tested", "fixed": true },
+    { "dim": "security", "severity": "low", "file": "packages/cli/src/store/key.ts", "what": "A pre-existing config or tokens folder was not tightened to 0700; now it is, with a test", "fixed": true },
+    { "dim": "reuse", "severity": "low", "file": "packages/cli/src/store/file-token-store.ts", "what": "The tokens folder name lived in two places; the store now uses tokensDir", "fixed": true },
+    { "dim": "discipline", "severity": "low", "file": "packages/cli/test/store/atomic.test.ts", "what": "A third test file beyond the plan, and a test hook on the public options; both recorded", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 1.83,
+    "verification_usd": 1.45,
+    "total_usd": 3.28,
+    "tokens": { "input": 88, "output": 54449, "cache_read": 22882743, "cache_creation": 178171, "thinking": 8658 }
+  },
+  "time": { "wall_clock_min": 6, "active_min": 6 },
+  "interactions": { "user_messages": 1, "assistant_turns": 29 },
+  "models": ["claude-sonnet-5-5"],
+  "verified_at": "2026-11-21T22:37:56Z"
+}
