@@ -21,19 +21,19 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 | FN-04 | Drive provider: list, stat, get and error mapping | done | FN-02, FN-03 | |
 | FN-05 | Drive provider: mkdir and simple upload | done | FN-04 | |
 | FN-06 | Drive provider: resumable upload | done | FN-05 | |
-| FN-07 | Drive provider: move, copy and delete | todo | FN-05 | |
-| FN-08 | CLI encrypted token store | todo | FN-01 | sim |
-| FN-09 | `byos auth`: loopback OAuth, status and logout | todo | FN-03, FN-04, FN-08, PP-02 | sim |
-| FN-10 | `byos doctor` | todo | FN-09 | |
-| FN-11 | CLI file commands with `--json` | todo | FN-07, FN-09 | |
-| FN-12 | `byos backup`: scan, manifest and plan | todo | FN-11 | |
-| FN-13 | `byos backup`: upload, resume and progress | todo | FN-06, FN-12 | |
-| FN-14 | `byos backup --verify` | todo | FN-13 | |
-| FN-15 | Spike: file visibility across OAuth clients under `drive.file` | todo | FN-09, FN-11 | |
-| FN-16 | Windows photo backup smoke (first consumer) | todo | FN-10, FN-13, FN-14 | |
-| FN-17 | Headless auth for server consumers (bill tracker integration) | todo | FN-11 | sim |
-| FN-18 | README and developer onboarding guide | todo | PP-01, FN-10 | |
-| FN-19 | First npm release | todo | FN-16, FN-18 | |
+| FN-07 | Drive provider: move, copy and delete | planned | FN-05 | |
+| FN-08 | CLI encrypted token store | planned | FN-01 | sim |
+| FN-09 | `byos auth`: loopback OAuth, status and logout | planned | FN-03, FN-04, FN-08, PP-02 | sim |
+| FN-10 | `byos doctor` | planned | FN-09 | |
+| FN-11 | CLI file commands with `--json` | planned | FN-07, FN-09 | sim |
+| FN-12 | `byos backup`: scan, manifest and plan | planned | FN-11 | |
+| FN-13 | `byos backup`: upload, resume and progress | planned | FN-06, FN-12 | |
+| FN-14 | `byos backup --verify` | planned | FN-13 | |
+| FN-15 | Spike: file visibility across OAuth clients under `drive.file` | planned | FN-09, FN-11 | |
+| FN-16 | Windows photo backup smoke (first consumer) | planned | FN-10, FN-13, FN-14 | |
+| FN-17 | Headless auth for server consumers (bill tracker integration) | planned | FN-11 | sim |
+| FN-18 | README and developer onboarding guide | planned | PP-01, FN-10 | |
+| FN-19 | First npm release | planned | FN-16, FN-18 | sim |
 
 ## Suggested execution order
 
