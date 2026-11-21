@@ -21,7 +21,7 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 | FN-04 | Drive provider: list, stat, get and error mapping | done | FN-02, FN-03 | |
 | FN-05 | Drive provider: mkdir and simple upload | done | FN-04 | |
 | FN-06 | Drive provider: resumable upload | done | FN-05 | |
-| FN-07 | Drive provider: move, copy and delete | planned | FN-05 | |
+| FN-07 | Drive provider: move, copy and delete | done | FN-05 | |
 | FN-08 | CLI encrypted token store | planned | FN-01 | sim |
 | FN-09 | `byos auth`: loopback OAuth, status and logout | planned | FN-03, FN-04, FN-08, PP-02 | sim |
 | FN-10 | `byos doctor` | planned | FN-09 | |

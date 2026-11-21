@@ -1,0 +1,28 @@
+{
+  "issue": "FN-07",
+  "app": "byos",
+  "branch": "feat/FN-07-drive-move-copy-delete",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 94,
+  "dimensions": { "scope": 24, "tests": 18, "security": 14, "reuse": 14, "architecture": 9, "guidelines": 10, "discipline": 5 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/core/src/testing/contract.ts", "what": "put case did not check the hash round-trip; delete case name promised more than it proved", "fixed": true },
+    { "dim": "reuse", "severity": "low", "file": "packages/drive/src/api/relocate.ts", "what": "copy reconciliation matcher did not compare the hash", "fixed": true },
+    { "dim": "scope", "severity": "low", "file": "packages/drive/src/api/relocate.ts", "what": "move did not refuse the root", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/drive/src/drive-provider.ts", "what": "308 lines, a little over the plan's ~300; recorded", "fixed": false },
+    { "dim": "discipline", "severity": "low", "file": "issues/FN-07-drive-move-copy-delete.md", "what": "Execution Record named the model used; removed", "fixed": true }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 3.03,
+    "verification_usd": 1.31,
+    "total_usd": 4.34,
+    "tokens": { "input": 144, "output": 78461, "cache_read": 30322543, "cache_creation": 210605, "thinking": 26035 }
+  },
+  "time": { "wall_clock_min": 6, "active_min": 6 },
+  "interactions": { "user_messages": 1, "assistant_turns": 39 },
+  "models": ["claude-sonnet-5-5"],
+  "verified_at": "2026-11-21T18:59:36Z"
+}

@@ -13,6 +13,8 @@ export interface FakeFile {
   appProperties?: Record<string, string>;
   md5Checksum?: string;
   trashed?: boolean;
+  /** Created by another app: under `drive.file` Drive refuses it with a 403. */
+  foreign?: boolean;
 }
 
 export type FakeDriveReply =
@@ -65,9 +67,10 @@ export const driveError = (status: number, reason?: string, headers?: Record<str
 
 export function fakeDrive(initial: FakeFile[] = []) {
   const files = new Map<string, FakeFile>(
+    // Copies, so a test that mutates a shared fixture array can't leak into the next test.
     [{ id: 'root', name: 'My Drive', parents: [], mimeType: FOLDER }, ...initial].map((f) => [
       f.id,
-      f,
+      { ...f, parents: [...f.parents] },
     ]),
   );
   const requests: DriveRequest[] = [];
@@ -272,6 +275,55 @@ export function fakeDrive(initial: FakeFile[] = []) {
       };
       files.set(file.id, file);
       return json(200, resource(file));
+    }
+    const item = /^\/drive\/v3\/files\/([^/]+)(\/copy)?$/.exec(url.pathname);
+    if (item) {
+      const file = files.get(decodeURIComponent(item[1] ?? ''));
+      if (!file) return json(404, driveError(404, 'notFound').body);
+      if (file.foreign) return json(403, driveError(403, 'appNotAuthorizedToFile').body);
+      if (item[2] === '/copy' && method === 'POST') {
+        const meta = JSON.parse(new TextDecoder().decode(body)) as {
+          name: string;
+          parents: string[];
+          appProperties?: Record<string, string>;
+        };
+        const copy: FakeFile = {
+          id: `new-${String(nextId++)}`,
+          name: meta.name,
+          parents: meta.parents,
+          mimeType: file.mimeType ?? 'application/octet-stream',
+          ...(file.bytes ? { bytes: file.bytes.slice() } : {}),
+          ...(meta.appProperties ? { appProperties: meta.appProperties } : {}),
+        };
+        files.set(copy.id, copy);
+        return json(200, resource(copy));
+      }
+      if (method === 'PATCH') {
+        const meta = JSON.parse(new TextDecoder().decode(body) || '{}') as {
+          name?: string;
+          trashed?: boolean;
+        };
+        const add = url.searchParams.get('addParents');
+        const remove = url.searchParams.get('removeParents');
+        if (add) file.parents = [...file.parents.filter((p) => p !== remove), add];
+        if (meta.name !== undefined) file.name = meta.name;
+        if (meta.trashed !== undefined) file.trashed = meta.trashed;
+        return json(200, resource(file));
+      }
+      if (method === 'DELETE') {
+        const doomed = new Set([file.id]);
+        for (let grew = true; grew;) {
+          grew = false;
+          for (const other of files.values()) {
+            if (!doomed.has(other.id) && other.parents.some((p) => doomed.has(p))) {
+              doomed.add(other.id);
+              grew = true;
+            }
+          }
+        }
+        for (const id of doomed) files.delete(id);
+        return new Response(null, { status: 204 });
+      }
     }
     if (method === 'POST' && url.pathname === '/drive/v3/files') {
       const meta = JSON.parse(new TextDecoder().decode(body)) as {

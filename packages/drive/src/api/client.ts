@@ -1,4 +1,11 @@
-import { AuthError, ProviderError, retry, type ByosEvents, type RetryOptions } from '@byos/core';
+import {
+  AuthError,
+  NotFoundError,
+  ProviderError,
+  retry,
+  type ByosEvents,
+  type RetryOptions,
+} from '@byos/core';
 import type { z } from 'zod';
 
 import { networkError } from '../http-errors.js';
@@ -7,7 +14,7 @@ import { mapDriveError } from './errors.js';
 
 /** A request's method, extra headers and body; the body is reused as is on a retry. */
 export interface DriveRequestInit {
-  readonly method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  readonly method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   readonly headers?: Readonly<Record<string, string>>;
   readonly body?: Uint8Array<ArrayBuffer> | string;
 }
@@ -99,6 +106,29 @@ export class DriveClient {
       ...(events?.onRetry === undefined ? {} : { onRetry: events.onRetry }),
       ...this.#options.retry,
     });
+  }
+
+  /**
+   * A request with no response body (a permanent delete), inside the core `retry`. A repeat
+   * that finds nothing means the first attempt landed, so it counts as done.
+   */
+  async noContent(operation: string, url: string, init?: DriveRequestInit): Promise<void> {
+    const { events } = this.#options;
+    await retry(
+      async (attempt) => {
+        try {
+          await this.#send(operation, url, attempt, init);
+        } catch (error) {
+          if (attempt > 1 && error instanceof NotFoundError) return;
+          throw error;
+        }
+      },
+      {
+        operation,
+        ...(events?.onRetry === undefined ? {} : { onRetry: events.onRetry }),
+        ...this.#options.retry,
+      },
+    );
   }
 
   /**

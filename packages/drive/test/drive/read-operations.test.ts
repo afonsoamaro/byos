@@ -147,12 +147,3 @@ describe('get', () => {
     await expect(provider.get({ id: 'gone' })).rejects.toBeInstanceOf(NotFoundError);
   });
 });
-
-describe('write operations', () => {
-  it('are not implemented yet', async () => {
-    const { provider } = setup();
-    await expect(provider.delete()).rejects.toThrow(/not implemented/);
-    await expect(provider.move()).rejects.toThrow(/not implemented/);
-    await expect(provider.copy()).rejects.toThrow(/not implemented/);
-  });
-});
