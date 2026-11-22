@@ -14,7 +14,10 @@ export async function tmp(prefix = 'byos-backup-'): Promise<string> {
 }
 
 /** Writes `files` (relative path to content) under `root`, creating folders as needed. */
-export async function write(root: string, files: Record<string, string>): Promise<void> {
+export async function write(
+  root: string,
+  files: Record<string, string | Uint8Array>,
+): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
     const path = join(root, rel);
     await mkdir(dirname(path), { recursive: true });

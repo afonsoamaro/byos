@@ -155,6 +155,8 @@ export interface Harness {
   readonly pages: string[];
   readonly opened: string[];
   readonly clientPath: string;
+  /** Presses Ctrl+C: calls every handler a command registered through `onInterrupt`. */
+  interrupt(): void;
   stdout(): string;
   stdoutBytes(): Buffer;
   stderr(): string;
@@ -192,9 +194,16 @@ export async function harness(
     const response = await realFetch(`${redirect}?${query}`);
     pages.push(await response.text());
   };
+  const interrupts = new Set<() => void>();
   const io: CliIO = {
     out,
     err,
+    onInterrupt: (handler) => {
+      interrupts.add(handler);
+      return () => {
+        interrupts.delete(handler);
+      };
+    },
     env,
     platform: 'linux',
     homedir: dir,
@@ -242,6 +251,9 @@ export async function harness(
     pages,
     opened,
     clientPath,
+    interrupt: () => {
+      for (const handler of [...interrupts]) handler();
+    },
     stdout: () => out.text(),
     stdoutBytes: () => out.bytes(),
     stderr: () => err.text(),

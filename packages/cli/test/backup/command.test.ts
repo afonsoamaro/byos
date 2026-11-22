@@ -124,10 +124,12 @@ describe('byos backup --dry-run', () => {
     expect(JSON.parse(t.stdout())).toMatchObject({ toUpload: ['a.jpg'] });
   });
 
-  it('without --dry-run it says uploading is not here yet (exit 2)', async () => {
-    const { t, folder } = await setup({ 'a.txt': 'a' });
-    expect(await main(['backup', folder], t.io)).toBe(2);
-    expect(t.stderr()).toContain('use --dry-run');
+  it('without --dry-run and without a sign-in it stops before scanning (exit 5)', async () => {
+    const { t, folder, data } = await setup({ 'a.txt': 'a' });
+    expect(await main(['backup', folder], t.io)).toBe(5);
+    expect(t.stderr()).toContain('not signed in');
+    expect(t.stdout()).toBe('');
+    await expect(readdir(data)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('a folder that does not exist, or is a file, is a usage error', async () => {

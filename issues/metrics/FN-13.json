@@ -1,0 +1,74 @@
+{
+  "issue": "FN-13",
+  "app": "byos",
+  "branch": "feat/FN-13-backup-upload",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 95,
+  "dimensions": {
+    "scope": 25,
+    "tests": 19,
+    "security": 15,
+    "reuse": 14,
+    "architecture": 8,
+    "guidelines": 10,
+    "discipline": 4
+  },
+  "vetoes": [],
+  "findings": [
+    {
+      "dim": "architecture",
+      "severity": "low",
+      "file": "packages/cli/src/backup/upload.ts",
+      "what": "runBackup is one long function and the file also holds Folders and describe()",
+      "fixed": false
+    },
+    {
+      "dim": "architecture",
+      "severity": "low",
+      "file": "packages/cli/src/commands/backup.ts",
+      "what": "The command grew to about 300 lines; runUpload takes nine positional parameters",
+      "fixed": false
+    },
+    {
+      "dim": "tests",
+      "severity": "low",
+      "file": "packages/cli/test/backup/upload.test.ts",
+      "what": "No test for the auth stop, and none for Ctrl+C during a resumable upload (partial > 0); both added after verification",
+      "fixed": true
+    },
+    {
+      "dim": "discipline",
+      "severity": "low",
+      "file": "packages/cli/test/backup/plan.test.ts",
+      "what": "The FN-12 test got the slow-test timeout, outside the plan; documented as a load flake",
+      "fixed": false
+    },
+    {
+      "dim": "reuse",
+      "severity": "low",
+      "file": "packages/cli/src/backup/progress.ts",
+      "what": "Progress bytes are keyed by file name, so two same-named files running together can blur the byte count",
+      "fixed": false
+    }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 3.61,
+    "verification_usd": 1.32,
+    "total_usd": 4.93
+  },
+  "time": {
+    "wall_clock_min": 19,
+    "active_min": 19
+  },
+  "interactions": {
+    "user_messages": 2,
+    "assistant_turns": 101,
+    "tool_calls": 66
+  },
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "verified_at": "2026-11-22T16:40:00Z"
+}

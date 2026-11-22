@@ -138,6 +138,17 @@ export class Manifest {
       .run(relPath, driveId);
   }
 
+  /** Forgets a folder and everything under it (it was deleted in Drive); '' forgets them all. */
+  clearFolders(relDir: string): void {
+    if (relDir === '') {
+      this.#db.exec('DELETE FROM folders');
+      return;
+    }
+    this.#db
+      .prepare('DELETE FROM folders WHERE rel_path = ? OR substr(rel_path, 1, ?) = ?')
+      .run(relDir, relDir.length + 1, `${relDir}/`);
+  }
+
   /** A resumable upload in progress. The URI is a secret: this file is owner-only. */
   session(relPath: string): SessionRow | undefined {
     const row = this.#db.prepare('SELECT * FROM sessions WHERE rel_path = ?').get(relPath);
