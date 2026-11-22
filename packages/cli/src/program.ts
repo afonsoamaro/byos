@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
 
 import { registerAuth } from './commands/auth.js';
+import { registerBackup } from './commands/backup.js';
 import { registerDoctor } from './commands/doctor.js';
 import { registerFiles } from './commands/files.js';
 import type { CliIO } from './io.js';
@@ -38,5 +39,6 @@ export function createProgram(io: CliIO, state: RunState = { exitCode: 0 }): Com
   registerAuth(program, io);
   registerDoctor(program, io, state);
   registerFiles(program, io);
+  registerBackup(program, io, state);
   return program;
 }

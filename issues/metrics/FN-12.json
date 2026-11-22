@@ -1,0 +1,63 @@
+{
+  "issue": "FN-12",
+  "app": "byos",
+  "branch": "feat/FN-12-backup-scan",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 96,
+  "dimensions": {
+    "scope": 25,
+    "tests": 18,
+    "security": 15,
+    "reuse": 13,
+    "architecture": 10,
+    "guidelines": 10,
+    "discipline": 5
+  },
+  "vetoes": [],
+  "findings": [
+    {
+      "dim": "tests",
+      "severity": "low",
+      "file": "packages/cli/test/backup/scan.test.ts",
+      "what": "Case-collision test passed with no assertion on a case-insensitive file system and the NFC duplicate had no test; both are now skipIf with a probe",
+      "fixed": true
+    },
+    {
+      "dim": "architecture",
+      "severity": "low",
+      "file": "packages/cli/src/backup/scan.ts",
+      "what": "Type cycle between scan.ts and plan.ts; PlanError moved to scan.ts",
+      "fixed": true
+    },
+    {
+      "dim": "reuse",
+      "severity": "low",
+      "file": "packages/cli/src/backup/scan.ts",
+      "what": "Per-name NFC normalization next to the core normalizePath; comment explains why",
+      "fixed": true
+    },
+    {
+      "dim": "security",
+      "severity": "low",
+      "file": "packages/cli/src/backup/manifest.ts",
+      "what": "Modes applied only at creation; an existing manifest is now tightened to 0600 and its folder to 0700",
+      "fixed": true
+    },
+    {
+      "dim": "security",
+      "severity": "low",
+      "file": "packages/cli/src/backup/manifest.ts",
+      "what": "A dry run on an existing manifest still applies a pending schema migration",
+      "fixed": false
+    }
+  ],
+  "rounds": 1,
+  "cost": null,
+  "time": null,
+  "interactions": null,
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "verified_at": "2026-11-22T13:20:00Z"
+}

@@ -70,6 +70,7 @@ const MOCK = {
   found: 12431,
   unchanged: 11980,
   toUpload: 451,
+  skipped: 38,
   totalBytes: Math.round(38.2 * GB),
   uploadedBeforeQuota: 214,
 };
@@ -181,6 +182,7 @@ function scanSummary({ out }: Ctx): void {
   line(out, `  ${num(MOCK.found)} files found`);
   line(out, `  ${num(MOCK.unchanged)} unchanged`);
   line(out, `  ${num(MOCK.toUpload)} to upload (${fmtBytes(MOCK.totalBytes)})`);
+  line(out, `  ${num(MOCK.skipped)} skipped (hidden 31, system 5, symlink 2)`);
   line(out, `  remote ${paint('cyan', MOCK.remote, out)}`);
   line(out);
 }
@@ -393,6 +395,25 @@ function rmJson({ out }: Ctx): number {
   return 0;
 }
 
+function backupDryRunJson({ out }: Ctx): number {
+  line(
+    out,
+    JSON.stringify({
+      found: 12431,
+      unchanged: 11980,
+      toUpload: ['2026/10/IMG_2988.HEIC', '2026/10/IMG_2989.HEIC'],
+      bytes: MOCK.totalBytes,
+      skipped: [
+        { relPath: 'Thumbs.db', reason: 'system' },
+        { relPath: '.hidden', reason: 'hidden' },
+      ],
+      warnings: [],
+      errors: [],
+    }),
+  );
+  return 0;
+}
+
 function putJson({ out }: Ctx): number {
   const result = {
     id: '1AbCmockFile00001',
@@ -422,6 +443,13 @@ const SCENARIOS: Scenario[] = [
     command: 'byos backup C:\\Users\\me\\Pictures --dry-run',
     title: 'Backup, dry run',
     run: backupDryRun,
+  },
+  {
+    name: 'backup-dry-run-json',
+    command: 'byos backup C:\\Users\\me\\Pictures --dry-run --json',
+    title: 'Backup, dry run, JSON',
+    json: true,
+    run: backupDryRunJson,
   },
   {
     name: 'backup',
@@ -560,6 +588,9 @@ async function markdown(): Promise<string> {
     '- Progress redraws one line in place on a TTY. Piped, it prints a plain line at every 10% and at the end.',
   );
   p('- Local paths print in the platform form; remote paths always use `/`.');
+  p(
+    '- `byos backup --dry-run --json` lists `toUpload` as relative paths (POSIX, NFC), `skipped` as `{ relPath, reason }` with the reason one of `system`, `hidden`, `symlink`, `excluded`, `not-regular` or `duplicate`, and `errors` as `{ relPath, code, message }`. The exit code is 1 when `errors` is not empty. A dry run reads the manifest but never writes to it, and creates no file.',
+  );
   p(
     '- A problem with the local disk (no permission, disk full, read-only) is `LOCAL_IO` with exit 1; a local path that does not exist or is not usable is `USAGE` with exit 2.',
   );

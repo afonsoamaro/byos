@@ -192,3 +192,22 @@ First half of backup: walk the local folder, compare with a local manifest, and 
 
 ## Checkpoint
 - `Checkpoint: nao`
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-12-backup-scan`, executed 2026-11-22. `picomatch` 4.0.7 and `@types/picomatch` 4.0.3 (latest, checked with `npm view`) added to `@byos/cli`, exact.
+- Order followed: manifest and plan first (the no-hash rule and the dry-run guarantee, the riskiest), then the scanner, then device, command and its tests, then the benchmark.
+- **Benchmark** (`pnpm build && node scripts/bench-backup-scan.ts`, 2026-11-22, load average about 5): 20000 files, first plan 2.45 s (20000 hashes, 20000 to upload), no-change re-run **0.76 s** (0 hash calls, 0 to upload). The criterion was under 30 s.
+- Mutation proofs (each restored, `cmp` equal): dropping the size and mtime shortcut fails three tests (the 1,000-file no-hash case among them); a dry run that refreshes the stored time fails the byte-identical table test; following symlinks fails the symlink test; a manifest created `0644` fails the permissions test; treating a row without an upload time as backed up fails its test.
+- Deviations from the plan:
+  - A dry run opens the manifest with `create: false`: when there is none, an in-memory one stands in and no file or folder is created, so a dry run on a new folder leaves the data directory untouched. An existing manifest is opened as usual (a pending schema migration would still apply).
+  - A manifest row only counts as "unchanged" when it has an upload time. A row without one (a half state a later writer might leave) is planned again.
+  - `scan(root, options, report)` takes the report object and fills it while the entries are consumed (skips, warnings, unreadable folders); `planBackup` merges it after the walk. Two extra skip reasons exist beside the plan's: `not-regular` (sockets, devices) and `duplicate` (two names equal after NFC in one folder: the second is skipped and warned, since both would share one manifest key).
+  - The human output gained a "skipped (reason n, ...)" line, and `docs/cli-output.md` gained the `backup-dry-run-json` scenario and the `--json` shape. Remote-derived text is printed through `printable()`.
+  - The benchmark imports the built `packages/cli/dist` (Node's type stripping can't resolve the `.js` specifiers of the TS sources), so it needs `pnpm build` first.
+  - The device name defaults to `os.hostname()` read in the command; tests pass `--device`.
+- **verify-it round 1: 96, no vetoes.** Fixed from its findings: the case-collision and NFC-duplicate tests are now `it.skipIf` with a real probe of the file system (APFS runs neither, so they run on the Linux CI) instead of passing without an assertion; the `PlanError` type moved to `scan.ts` (no type cycle with `plan.ts`); a comment on why the scanner normalizes one name itself instead of calling `normalizePath`; an existing manifest or its folder left with looser modes is tightened to `0600` and `0700` when opened (with a test).
+- Not done, by choice: a dry run on an existing manifest still applies a pending schema migration (a write that never touches the upload columns).
+- `BYOS_TEST_TIMEOUT=300000 pnpm check`: build, lint (0 warnings), typecheck and tests green.
