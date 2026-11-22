@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { NotFoundError } from '@byos/core';
 import { MemoryProvider } from '@byos/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -336,5 +337,29 @@ describe('local disk and name problems', () => {
       expect(await main(['put', file, '--name', name, '--json'], t.io)).toBe(2);
     }
     expect(memory.calls.put).toBe(0);
+  });
+});
+
+describe('terminal safety of remote names', () => {
+  const evil = 'a\u001b[2Jb\u0007.txt';
+
+  it('human output replaces control characters, JSON keeps the real name', async () => {
+    const { t, memory } = await setup();
+    await memory.put({ parent: { path: '' }, name: evil, body: new TextEncoder().encode('x') });
+    expect(await main(['ls'], t.io)).toBe(0);
+    expect(t.stdout()).toContain('a?[2Jb?.txt');
+    expect(t.stdout()).not.toContain('\u001b');
+    expect(await main(['stat', 'id:mem-1'], t.io)).toBe(0);
+    expect(t.stdout()).not.toContain('\u001b');
+    expect(await main(['ls', '--json'], t.io)).toBe(0);
+    const items = JSON.parse(t.stdout().trimEnd().split('\n').at(-1) ?? '') as { name: string }[];
+    expect(items[0]?.name).toBe(evil);
+  });
+
+  it('an error message with a control character is cleaned too', async () => {
+    const { t, memory } = await setup();
+    memory.failNext('stat', new NotFoundError(`no file named ${evil}`));
+    expect(await main(['stat', 'x'], t.io)).toBe(3);
+    expect(t.stderr()).not.toContain('\u001b');
   });
 });

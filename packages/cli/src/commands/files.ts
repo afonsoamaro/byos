@@ -14,7 +14,7 @@ import type { Command } from 'commander';
 
 import { openContext, openStorage, type GlobalFlags } from '../context.js';
 import { CliError } from '../errors.js';
-import { formatBytes } from '../format.js';
+import { formatBytes, printable } from '../format.js';
 import type { CliIO } from '../io.js';
 import { pathApi, safeLocalName, sha256File } from '../local.js';
 import { assertRemotePath, joinRemote, parseRemote, splitRemote } from '../remote.js';
@@ -104,7 +104,8 @@ async function runLs(io: CliIO, flags: GlobalFlags, remote: string): Promise<voi
     pageToken = page.nextPageToken;
   } while (pageToken !== undefined);
   for (const item of items) {
-    ctx.out.line(item.isFolder ? `${item.name}/` : `${item.name}  ${formatBytes(item.size ?? 0)}`);
+    const name = printable(item.name);
+    ctx.out.line(item.isFolder ? `${name}/` : `${name}  ${formatBytes(item.size ?? 0)}`);
   }
   ctx.out.data(items.map((item) => toEntry(item, pathOf(parent, item.name))));
 }
@@ -116,7 +117,7 @@ async function runStat(io: CliIO, flags: GlobalFlags, remote: string): Promise<v
   const found = await requireStat(provider, ref, remote);
   const entry = toEntry(found, pathOf(ref));
   ctx.out.rows(
-    Object.entries(entry).map(([key, value]) => [key, String(value)] as const),
+    Object.entries(entry).map(([key, value]) => [key, printable(String(value))] as const),
     '',
   );
   ctx.out.data(entry);
@@ -134,7 +135,7 @@ async function runMkdir(io: CliIO, flags: GlobalFlags & { parents?: boolean }, r
     name,
     ...(flags.parents === true ? { parents: true } : {}),
   });
-  ctx.out.ok(`Folder ${joinRemote(dir, name)}`);
+  ctx.out.ok(`Folder ${printable(joinRemote(dir, name))}`);
   ctx.out.data(toEntry(folder, joinRemote(dir, name)));
 }
 
@@ -195,7 +196,7 @@ async function runPut(io: CliIO, flags: PutFlags, localArg: string): Promise<voi
     overwrite: flags.overwrite === true,
   });
   const path = pathOf(parent, name);
-  ctx.out.ok(`Uploaded ${path ?? name} (${formatBytes(info.size)})`);
+  ctx.out.ok(`Uploaded ${printable(path ?? name)} (${formatBytes(info.size)})`);
   ctx.out.data({
     id: result.id,
     name: result.name,
@@ -276,7 +277,7 @@ async function runGet(
     await rm(dest, { force: true });
     throw localIoError(error, dest);
   }
-  ctx.out.ok(`Saved ${dest} (${formatBytes(file.size ?? 0)})`);
+  ctx.out.ok(`Saved ${printable(dest)} (${formatBytes(file.size ?? 0)})`);
   ctx.out.data({ id: file.id, name: file.name, size: file.size ?? 0, path: dest });
 }
 
@@ -298,7 +299,9 @@ async function relocate(
   const result =
     verb === 'move' ? await provider.move(ref, options) : await provider.copy(ref, options);
   const path = joinRemote(parent.path ?? '', result.name);
-  ctx.out.ok(`${verb === 'move' ? 'Moved' : 'Copied'} ${file.name} to ${path}`);
+  ctx.out.ok(
+    `${verb === 'move' ? 'Moved' : 'Copied'} ${printable(file.name)} to ${printable(path)}`,
+  );
   ctx.out.data(toEntry(result, path));
 }
 
