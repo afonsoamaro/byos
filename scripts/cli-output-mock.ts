@@ -414,6 +414,43 @@ function backupDryRunJson({ out }: Ctx): number {
   return 0;
 }
 
+function backupVerify(ctx: Ctx): number {
+  const { out, sym } = ctx;
+  const total = 12431;
+  const width = fmtCount(total).length;
+  const num = (n: number) => fmtCount(n).padStart(width);
+  line(
+    out,
+    `Verifying ${fmtCount(total)} files against ${paint('cyan', 'BYOS Backup/DESKTOP-01/Pictures', out)}`,
+  );
+  line(out, `  ${num(total - 4)} ok`);
+  line(out, `  ${num(2)} missing in Drive`);
+  line(out, `  ${num(1)} in the Drive trash`);
+  line(out, `  ${num(1)} different content in Drive`);
+  line(out);
+  line(out, `${sym.fail} missing   2026/10/IMG_2988.HEIC`);
+  line(out, `${sym.fail} missing   2026/10/IMG_2989.HEIC`);
+  line(out, `${sym.fail} trashed   2026/09/IMG_2411.HEIC`);
+  line(out, `${sym.fail} mismatch  2026/08/VID_0120.mp4`);
+  line(out);
+  line(out, `4 of ${fmtCount(total)} files need attention.`);
+  return 1;
+}
+
+function backupVerifyJson({ out }: Ctx): number {
+  line(
+    out,
+    JSON.stringify({
+      ok: 12427,
+      missing: ['2026/10/IMG_2988.HEIC', '2026/10/IMG_2989.HEIC'],
+      trashed: ['2026/09/IMG_2411.HEIC'],
+      mismatch: ['2026/08/VID_0120.mp4'],
+      errors: [],
+    }),
+  );
+  return 1;
+}
+
 function putJson({ out }: Ctx): number {
   const result = {
     id: '1AbCmockFile00001',
@@ -450,6 +487,19 @@ const SCENARIOS: Scenario[] = [
     title: 'Backup, dry run, JSON',
     json: true,
     run: backupDryRunJson,
+  },
+  {
+    name: 'backup-verify',
+    command: 'byos backup C:\\Users\\me\\Pictures --verify',
+    title: 'Backup, verify',
+    run: backupVerify,
+  },
+  {
+    name: 'backup-verify-json',
+    command: 'byos backup C:\\Users\\me\\Pictures --verify --json',
+    title: 'Backup, verify, JSON',
+    json: true,
+    run: backupVerifyJson,
   },
   {
     name: 'backup',
@@ -593,6 +643,9 @@ async function markdown(): Promise<string> {
   );
   p(
     '- `byos backup --json` (a real run) prints one summary object on stdout, `{ uploaded, skipped, failed, remaining, stoppedBy?, failures }`, with `skipped` the files already backed up and unchanged, `stoppedBy` one of `quota`, `auth` or `interrupt`, and `failures` as `{ relPath, code, message }`. No progress is printed. When the run stops early the one-line error also goes to stderr (`QUOTA_EXCEEDED`, `AUTH_FAILED` or `INTERRUPTED`) and the exit code is 6, 5 or 130. Any failed file makes the exit code 1.',
+  );
+  p(
+    '- `byos backup --verify` compares every backed-up file with Drive by id, so a file renamed or moved in Drive is still found. It prints counts and the problem files (`missing`, `trashed`, `mismatch`, `error`, at most 20 listed), or with `--json` one report `{ ok, missing, trashed, mismatch, errors }` of relative paths. It never writes to Drive or to the manifest. The exit code is 1 when anything needs attention, 5 when the sign-in is refused, and 2 when the folder was never backed up.',
   );
   p(
     '- `byos backup` runs up to `--concurrency` uploads at once (default 4, at most 16). It never deletes anything in Drive and never overwrites a file it did not create.',

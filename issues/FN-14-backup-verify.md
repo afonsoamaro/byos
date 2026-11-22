@@ -144,3 +144,21 @@ Lets the owner trust the backup: compares every manifest entry with Drive and re
 
 ## Checkpoint
 - `Checkpoint: nao`
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-14-backup-verify`, executed 2026-11-22. No new dependency.
+- Order followed: `DriveProvider.inspect` first (the riskiest part, telling the trash from a missing file) with its drive tests, then the read-only manifest open, `verify.ts`, the command flag and `verify.test.ts`, then the PP-02 mock scenarios and the regenerated doc.
+- Mutation proofs (each restored, `diff` equal): treating a trashed file as present fails the category and human-report tests; dropping the content hash comparison fails the same two; making `inspect` never report the trash fails its drive test.
+- Deviations from the plan:
+  - The manifest is opened by a new `openManifestReadOnly` (SQLite `readOnly`, no migration and no permission change) that returns `undefined` when there is no manifest, so a verify on a never-backed-up folder creates nothing.
+  - `--verify` does not require the local folder to exist (the manifest key only needs its path), so a backup can be checked from a drive that is no longer attached.
+  - The human report lists at most 20 problem files and then "and N more (--json lists them all)".
+  - `--concurrency` has no commander default now: the command picks 4 to upload and 8 to verify, and the help text says so.
+  - `docs/cli-output.md` gained `backup-verify` and `backup-verify-json` and a convention line, and the drift test lists both scenarios.
+  - `last_verified_at` was not added, as planned (it needs a migration and a write).
+- Not done, by choice: no repair of problems (a missing or trashed file is only reported; the next `byos backup` does not re-upload a file the manifest believes is in Drive).
+- **verify-it round 1: 97, no vetoes.** Fixed from its findings: `#statById` now calls `inspect` (one lookup path). Left open, low: `commands/backup.ts` holds scan, upload and verify; the `VerifyProvider` cast.
+- `BYOS_TEST_TIMEOUT=300000 pnpm check`: build, lint (0 warnings), prettier and typecheck green; tests 83 core, 164 drive, 237 cli (2 skipped on this file system), 32 root.

@@ -6,10 +6,16 @@ import type { Command } from 'commander';
 import { AuthError } from '@byos/core';
 
 import { deviceName } from '../backup/device.js';
-import { openManifest, type Manifest } from '../backup/manifest.js';
+import { openManifest, openManifestReadOnly, type Manifest } from '../backup/manifest.js';
 import { planBackup, type Plan } from '../backup/plan.js';
 import { Progress } from '../backup/progress.js';
 import { createReport, scan } from '../backup/scan.js';
+import {
+  hasProblems,
+  verifyBackup,
+  type VerifyProvider,
+  type VerifyReport,
+} from '../backup/verify.js';
 import { runBackup, type BackupProvider, type Failure, type RunResult } from '../backup/upload.js';
 import { openContext, openStorage, type Context, type GlobalFlags } from '../context.js';
 import { CliError } from '../errors.js';
@@ -24,13 +30,16 @@ import type { RunState } from '../program.js';
 const DEFAULT_REMOTE_ROOT = 'BYOS Backup';
 const SAMPLE = 6;
 const DEFAULT_CONCURRENCY = 4;
+const DEFAULT_VERIFY_CONCURRENCY = 8;
 const MAX_CONCURRENCY = 16;
+const LIST_LIMIT = 20;
 
 interface BackupFlags extends GlobalFlags {
   readonly device?: string;
   readonly remoteRoot?: string;
   readonly exclude?: readonly string[];
   readonly dryRun?: boolean;
+  readonly verify?: boolean;
   readonly concurrency?: string;
 }
 
@@ -70,8 +79,8 @@ function listPlan(out: Output, plan: Plan): void {
   if (more > 0) out.line(`  ${out.sym.wait} and ${count.format(more)} more`);
 }
 
-function concurrencyOf(raw: string | undefined): number {
-  const n = Number(raw ?? DEFAULT_CONCURRENCY);
+function concurrencyOf(raw: string | undefined, fallback: number): number {
+  const n = Number(raw ?? fallback);
   if (!Number.isInteger(n) || n < 1) {
     throw new CliError('--concurrency needs a whole number of 1 or more', 2, 'USAGE');
   }
@@ -189,10 +198,79 @@ async function runUpload(
   state.exitCode = stopped === undefined ? (failed > 0 ? 1 : 0) : STOP_EXIT[stopped];
 }
 
+const CATEGORY_TEXT = {
+  missing: 'missing in Drive',
+  trashed: 'in the Drive trash',
+  mismatch: 'different content in Drive',
+} as const;
+
+function printVerify(out: Output, remote: string, total: number, report: VerifyReport): void {
+  const width = count.format(total).length;
+  const num = (n: number) => count.format(n).padStart(width);
+  out.line(`Verifying ${count.format(total)} files against ${out.link(printable(remote))}`);
+  out.line(`  ${num(report.ok)} ok`);
+  for (const key of ['missing', 'trashed', 'mismatch'] as const) {
+    if (report[key].length > 0) out.line(`  ${num(report[key].length)} ${CATEGORY_TEXT[key]}`);
+  }
+  if (report.errors.length > 0) out.line(`  ${num(report.errors.length)} could not be checked`);
+  const problems = [
+    ...report.missing.map((path) => ['missing', path] as const),
+    ...report.trashed.map((path) => ['trashed', path] as const),
+    ...report.mismatch.map((path) => ['mismatch', path] as const),
+    ...report.errors.map((e) => ['error', `${e.relPath} (${e.code})`] as const),
+  ];
+  if (problems.length > 0) out.line();
+  for (const [kind, path] of problems.slice(0, LIST_LIMIT)) {
+    out.line(`${out.sym.fail} ${kind.padEnd(8)}  ${printable(path)}`);
+  }
+  const more = problems.length - LIST_LIMIT;
+  if (more > 0) out.line(`${out.sym.wait} and ${count.format(more)} more (--json lists them all)`);
+  out.line();
+  if (hasProblems(report)) {
+    out.line(`${count.format(problems.length)} of ${count.format(total)} files need attention.`);
+  } else
+    out.ok(`All ${count.format(total)} files are in Drive with the content that was uploaded.`);
+}
+
+async function verifyCommand(io: CliIO, flags: BackupFlags, folderArg: string, state: RunState) {
+  const ctx = openContext(io, flags);
+  const api = pathApi(io.platform);
+  const concurrency = concurrencyOf(flags.concurrency, DEFAULT_VERIFY_CONCURRENCY);
+  const folder = api.resolve(folderArg);
+  const device = deviceName(flags.device ?? hostname());
+  const remoteRoot = flags.remoteRoot ?? DEFAULT_REMOTE_ROOT;
+  assertRemotePath(remoteRoot);
+  const remote = [
+    ...remoteRoot.split('/').filter(Boolean),
+    device,
+    api.basename(folder) || 'root',
+  ].join('/');
+
+  const manifest = openManifestReadOnly({
+    dataDir: dataDir({ platform: io.platform, env: io.env, homedir: io.homedir }),
+    folder,
+    device,
+    remoteRoot,
+  });
+  if (!manifest) {
+    throw new CliError('no backup found for this folder; run byos backup first', 2, 'USAGE');
+  }
+  try {
+    const rows = manifest.allUploaded();
+    const provider = (await openStorage(ctx)) as VerifyProvider;
+    const report = await verifyBackup({ rows, provider, concurrency });
+    printVerify(ctx.out, remote, rows.length, report);
+    ctx.out.data(report);
+    state.exitCode = hasProblems(report) ? 1 : 0;
+  } finally {
+    manifest.close();
+  }
+}
+
 async function backupCommand(io: CliIO, flags: BackupFlags, folderArg: string, state: RunState) {
   const ctx = openContext(io, flags);
   const api = pathApi(io.platform);
-  const concurrency = concurrencyOf(flags.concurrency);
+  const concurrency = concurrencyOf(flags.concurrency, DEFAULT_CONCURRENCY);
   const folder = api.resolve(folderArg);
   const info = await stat(folder).catch(() => undefined);
   if (!info?.isDirectory()) throw new CliError(`${folderArg} is not a folder`, 2, 'USAGE');
@@ -292,12 +370,21 @@ export function registerBackup(program: Command, io: CliIO, state: RunState): vo
     )
     .option(
       '--concurrency <n>',
-      `files to upload at once (1 to ${String(MAX_CONCURRENCY)})`,
-      String(DEFAULT_CONCURRENCY),
+      `files to upload (or check, with --verify) at once, 1 to ${String(MAX_CONCURRENCY)} (default ${String(DEFAULT_CONCURRENCY)}, ${String(DEFAULT_VERIFY_CONCURRENCY)} to verify)`,
+    )
+    .option(
+      '--verify',
+      'check every backed-up file is still in Drive with the same content; change nothing',
     )
     .option('--dry-run', 'scan and show what would upload, change nothing')
     .description('Back a folder up to Drive, keeping every file (nothing is ever deleted)')
     .action(async (folder: string, _options: unknown, command: Command) => {
-      await backupCommand(io, command.optsWithGlobals<BackupFlags>(), folder, state);
+      const flags = command.optsWithGlobals<BackupFlags>();
+      if (flags.verify === true) {
+        if (flags.dryRun === true) {
+          throw new CliError('--verify and --dry-run can not be combined', 2, 'USAGE');
+        }
+        await verifyCommand(io, flags, folder, state);
+      } else await backupCommand(io, flags, folder, state);
     });
 }

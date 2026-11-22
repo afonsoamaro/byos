@@ -104,6 +104,20 @@ export class Manifest {
     return row ? toFile(row) : undefined;
   }
 
+  /** Every file the manifest says is in Drive, for `--verify`. */
+  allUploaded(): { relPath: string; sha256: string; driveId: string }[] {
+    return this.#db
+      .prepare(
+        'SELECT rel_path, sha256, drive_id FROM files WHERE uploaded_at IS NOT NULL AND drive_id IS NOT NULL ORDER BY rel_path',
+      )
+      .all()
+      .map((row) => ({
+        relPath: row.rel_path as string,
+        sha256: row.sha256 as string,
+        driveId: row.drive_id as string,
+      }));
+  }
+
   /** Same content, new modification time: remember the time so the next run skips the hash. */
   touchMtime(relPath: string, mtimeMs: number): void {
     this.#db.prepare('UPDATE files SET mtime_ms = ? WHERE rel_path = ?').run(mtimeMs, relPath);
@@ -253,4 +267,20 @@ export function openManifest(options: OpenManifestOptions): Manifest {
     throw error;
   }
   return new Manifest(db, target);
+}
+
+/**
+ * Opens an existing manifest for reading only (no migration, no permission change, no write),
+ * or returns undefined when this folder was never backed up.
+ */
+export function openManifestReadOnly(
+  options: ManifestKey & { dataDir: string },
+): Manifest | undefined {
+  const file = join(options.dataDir, 'manifests', manifestFileName(options));
+  try {
+    closeSync(openSync(file, 'r'));
+  } catch {
+    return undefined;
+  }
+  return new Manifest(new DatabaseSync(file, { readOnly: true }), file);
 }

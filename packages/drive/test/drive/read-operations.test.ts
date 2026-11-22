@@ -131,6 +131,27 @@ describe('stat', () => {
   });
 });
 
+describe('inspect', () => {
+  it('tells a live file, a trashed file and a missing one apart, with one read each', async () => {
+    const { provider, drive } = setup({ files: tree });
+    const live = await provider.inspect('f1');
+    expect(live).toMatchObject({ trashed: false, stat: { id: 'f1', sha256: SHA } });
+    expect(await provider.inspect('gone')).toMatchObject({
+      trashed: true,
+      stat: { id: 'gone' },
+    });
+    expect(await provider.inspect('nope')).toBeUndefined();
+    // Only reads: three GETs, no write of any kind.
+    expect(drive.requests.map((r) => r.method)).toEqual(['GET', 'GET', 'GET']);
+  });
+
+  it('keeps raising other errors', async () => {
+    const { provider, drive } = setup({ files: tree });
+    drive.failNext(/\/files\/f1/, { status: 400 });
+    await expect(provider.inspect('f1')).rejects.toBeInstanceOf(ProviderError);
+  });
+});
+
 describe('get', () => {
   it('streams the content by id and by path', async () => {
     const { provider } = setup({ files: tree });
