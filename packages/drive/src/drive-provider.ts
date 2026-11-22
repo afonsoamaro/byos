@@ -250,6 +250,24 @@ export class DriveProvider implements StorageProvider {
     });
   }
 
+  /**
+   * Looks a file up by id and tells a file in the trash apart from one that is gone, which
+   * `stat` can't (it hides both). `undefined` means Drive has no such file at all. Read-only.
+   */
+  async inspect(id: string): Promise<{ stat: FileStat; trashed: boolean } | undefined> {
+    try {
+      const file = await this.#client.json(
+        'drive.stat',
+        filesUrl(id, { fields: FILE_FIELDS }),
+        driveFileSchema,
+      );
+      return { stat: toFileStat(file), trashed: file.trashed === true };
+    } catch (error) {
+      if (error instanceof NotFoundError) return undefined;
+      throw error;
+    }
+  }
+
   /** The signed-in Google account, from `about.get` (no extra scope needed). */
   async account(): Promise<DriveAccount> {
     const { user } = await this.#client.json('drive.about', aboutUrl(), aboutSchema);
@@ -295,17 +313,8 @@ export class DriveProvider implements StorageProvider {
   }
 
   async #statById(id: string): Promise<FileStat | undefined> {
-    try {
-      const file = await this.#client.json(
-        'drive.stat',
-        filesUrl(id, { fields: FILE_FIELDS }),
-        driveFileSchema,
-      );
-      return file.trashed ? undefined : toFileStat(file);
-    } catch (error) {
-      if (error instanceof NotFoundError) return undefined;
-      throw error;
-    }
+    const found = await this.inspect(id);
+    return found === undefined || found.trashed ? undefined : found.stat;
   }
 
   async #findChildren(parentId: string, name: string): Promise<FileStat[]> {

@@ -1,0 +1,60 @@
+{
+  "issue": "FN-14",
+  "app": "byos",
+  "branch": "feat/FN-14-backup-verify",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 97,
+  "dimensions": {
+    "scope": 25,
+    "tests": 19,
+    "security": 15,
+    "reuse": 14,
+    "architecture": 9,
+    "guidelines": 10,
+    "discipline": 5
+  },
+  "vetoes": [],
+  "findings": [
+    {
+      "dim": "reuse",
+      "severity": "low",
+      "file": "packages/drive/src/drive-provider.ts",
+      "what": "inspect repeated the request of #statById; #statById now calls inspect",
+      "fixed": true
+    },
+    {
+      "dim": "architecture",
+      "severity": "low",
+      "file": "packages/cli/src/commands/backup.ts",
+      "what": "backup.ts holds scan, upload and verify and keeps growing",
+      "fixed": false
+    },
+    {
+      "dim": "guidelines",
+      "severity": "low",
+      "file": "packages/cli/src/commands/backup.ts",
+      "what": "openStorage result is cast to VerifyProvider to reach the optional inspect",
+      "fixed": false
+    }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 1.33,
+    "verification_usd": 0.76,
+    "total_usd": 2.08
+  },
+  "time": {
+    "wall_clock_min": 22,
+    "active_min": 22
+  },
+  "interactions": {
+    "user_messages": 1,
+    "assistant_turns": 35,
+    "tool_calls": 30
+  },
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "verified_at": "2026-11-22T18:32:00Z"
+}

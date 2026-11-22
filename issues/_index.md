@@ -28,7 +28,7 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 | FN-11 | CLI file commands with `--json` | done | FN-07, FN-09 | sim |
 | FN-12 | `byos backup`: scan, manifest and plan | done | FN-11 | |
 | FN-13 | `byos backup`: upload, resume and progress | done | FN-06, FN-12 | |
-| FN-14 | `byos backup --verify` | planned | FN-13 | |
+| FN-14 | `byos backup --verify` | done | FN-13 | |
 | FN-15 | Spike: file visibility across OAuth clients under `drive.file` | planned | FN-09, FN-11 | |
 | FN-16 | Windows photo backup smoke (first consumer) | planned | FN-10, FN-13, FN-14 | |
 | FN-17 | Headless auth for server consumers (bill tracker integration) | planned | FN-11 | sim |

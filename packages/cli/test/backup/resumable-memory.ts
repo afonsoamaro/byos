@@ -53,7 +53,16 @@ export class ResumableMemory implements StorageProvider {
   readonly name = 'resumable-memory';
   readonly inner: MemoryProvider;
   /** Calls the code under test made on this provider, `delete` included. */
-  readonly calls = { delete: 0, put: 0, resumeUpload: 0 };
+  readonly calls = {
+    delete: 0,
+    put: 0,
+    resumeUpload: 0,
+    stat: 0,
+    inspect: 0,
+    mkdir: 0,
+    move: 0,
+    copy: 0,
+  };
   /** The offsets `resumeUpload` was called with. */
   readonly resumedFrom: number[] = [];
   /** How many puts were running at once, at most. */
@@ -62,6 +71,8 @@ export class ResumableMemory implements StorageProvider {
   killAfterChunks: number | undefined;
   /** Every resume answers as if the session expired. */
   expireSessions = false;
+  /** `inspect` throws this for the given file ids. */
+  readonly inspectFails = new Map<string, Error>();
   /** Report this hash for the next completed upload instead of the real one. */
   nextSha256: string | undefined;
   /** Waits here at the start of every put; lets a test hold uploads in flight. */
@@ -86,7 +97,26 @@ export class ResumableMemory implements StorageProvider {
   }
 
   stat(ref: FileRef): Promise<FileStat | undefined> {
+    this.calls.stat += 1;
     return this.inner.stat(ref);
+  }
+
+  /** What `DriveProvider.inspect` answers: the file, and whether it is in the trash. */
+  async inspect(id: string): Promise<{ stat: FileStat; trashed: boolean } | undefined> {
+    this.calls.inspect += 1;
+    const failure = this.inspectFails.get(id);
+    if (failure) throw failure;
+    const entry = this.inner.snapshot().find((found) => found.id === id);
+    if (!entry) return undefined;
+    if (entry.trashed) {
+      const name = entry.path.split('/').at(-1) ?? '';
+      return {
+        trashed: true,
+        stat: { id, name, parents: [], isFolder: entry.isFolder, appProperties: {} },
+      };
+    }
+    const stat = await this.inner.stat({ id });
+    return stat === undefined ? undefined : { stat, trashed: false };
   }
 
   get(ref: FileRef): Promise<ReadableStream<Uint8Array>> {
@@ -94,14 +124,17 @@ export class ResumableMemory implements StorageProvider {
   }
 
   mkdir(options: MkdirOptions): Promise<FileStat> {
+    this.calls.mkdir += 1;
     return this.inner.mkdir(options);
   }
 
   move(ref: FileRef, options: MoveOptions): Promise<FileStat> {
+    this.calls.move += 1;
     return this.inner.move(ref, options);
   }
 
   copy(ref: FileRef, options: CopyOptions): Promise<FileStat> {
+    this.calls.copy += 1;
     return this.inner.copy(ref, options);
   }
 
