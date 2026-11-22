@@ -50,6 +50,7 @@ const count = new Intl.NumberFormat('en-US');
 const fmtCount = (n: number): string => count.format(n);
 
 // Binary units labeled like Windows Explorer does (GiB shown as GB).
+// Copy of formatBytes in packages/cli/src/format.ts: this script runs under plain Node and does not load the TS package.
 function fmtBytes(n: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let value = n;
@@ -312,7 +313,7 @@ async function backupInterrupted(ctx: Ctx): Promise<number> {
   return 130;
 }
 
-const MISSING = 'Bills/2026-11/missing.pdf';
+const MISSING = 'Archive/2026-11/missing.pdf';
 
 function error({ err, sym }: Ctx): number {
   line(err, `${paint('red', sym.fail, err)} NOT_FOUND: no file at ${MISSING}`);
@@ -331,14 +332,14 @@ function lsJson({ out }: Ctx): number {
     {
       id: '1AbCmockFolder0001',
       name: 'receipts',
-      path: 'Bills/2026-11/receipts',
+      path: 'Archive/2026-11/receipts',
       kind: 'folder',
       modifiedTime: '2026-11-03T12:00:00.000Z',
     },
     {
       id: '1AbCmockFile00001',
       name: 'statement.pdf',
-      path: 'Bills/2026-11/statement.pdf',
+      path: 'Archive/2026-11/statement.pdf',
       kind: 'file',
       size: 123456,
       modifiedTime: '2026-11-05T09:30:00.000Z',
@@ -347,7 +348,7 @@ function lsJson({ out }: Ctx): number {
     {
       id: '1AbCmockFile00002',
       name: 'invoice.pdf',
-      path: 'Bills/2026-11/invoice.pdf',
+      path: 'Archive/2026-11/invoice.pdf',
       kind: 'file',
       size: 48210,
       modifiedTime: '2026-11-07T18:12:00.000Z',
@@ -358,13 +359,47 @@ function lsJson({ out }: Ctx): number {
   return 0;
 }
 
+const FOLDER_ENTRY = {
+  id: '1AbCmockFolder0001',
+  name: '2026-11',
+  path: 'Archive/2026-11',
+  kind: 'folder',
+  modifiedTime: '2026-11-03T12:00:00.000Z',
+};
+
+function statJson({ out }: Ctx): number {
+  line(
+    out,
+    JSON.stringify({
+      id: '1AbCmockFile00001',
+      name: 'statement.pdf',
+      path: 'Archive/2026-11/statement.pdf',
+      kind: 'file',
+      size: 123456,
+      modifiedTime: '2026-11-05T09:30:00.000Z',
+      sha256: MOCK_SHA,
+    }),
+  );
+  return 0;
+}
+
+function mkdirJson({ out }: Ctx): number {
+  line(out, JSON.stringify(FOLDER_ENTRY));
+  return 0;
+}
+
+function rmJson({ out }: Ctx): number {
+  line(out, JSON.stringify({ id: '1AbCmockFile00001', trashed: true }));
+  return 0;
+}
+
 function putJson({ out }: Ctx): number {
   const result = {
     id: '1AbCmockFile00001',
     name: 'statement.pdf',
     sha256: MOCK_SHA,
     size: 123456,
-    path: 'Bills/2026-11/statement.pdf',
+    path: 'Archive/2026-11/statement.pdf',
   };
   line(out, JSON.stringify(result));
   return 0;
@@ -417,14 +452,35 @@ const SCENARIOS: Scenario[] = [
   },
   {
     name: 'ls-json',
-    command: 'byos ls Bills/2026-11 --json',
+    command: 'byos ls Archive/2026-11 --json',
     title: 'ls --json',
     json: true,
     run: lsJson,
   },
   {
+    name: 'stat-json',
+    command: 'byos stat Archive/2026-11/statement.pdf --json',
+    title: 'stat --json',
+    json: true,
+    run: statJson,
+  },
+  {
+    name: 'mkdir-json',
+    command: 'byos mkdir Archive/2026-11 --parents --json',
+    title: 'mkdir --json',
+    json: true,
+    run: mkdirJson,
+  },
+  {
+    name: 'rm-json',
+    command: 'byos rm Archive/2026-11/statement.pdf --json',
+    title: 'rm --json',
+    json: true,
+    run: rmJson,
+  },
+  {
     name: 'put-json',
-    command: 'byos put ./statement.pdf --remote Bills/2026-11 --json',
+    command: 'byos put ./statement.pdf --remote Archive/2026-11 --json',
     title: 'put --json',
     json: true,
     run: putJson,
@@ -504,6 +560,15 @@ async function markdown(): Promise<string> {
     '- Progress redraws one line in place on a TTY. Piped, it prints a plain line at every 10% and at the end.',
   );
   p('- Local paths print in the platform form; remote paths always use `/`.');
+  p(
+    '- A problem with the local disk (no permission, disk full, read-only) is `LOCAL_IO` with exit 1; a local path that does not exist or is not usable is `USAGE` with exit 2.',
+  );
+  p(
+    '- In `--json` output `path` is present when the file was reached by path; a file reached by `id:<fileId>` has no `path`, because Drive ids carry none.',
+  );
+  p(
+    '- `byos get` to stdout (no local path, or `-`) writes the raw bytes and can not be combined with `--json`. It never overwrites a local file without `--force`, and `byos put` never replaces a remote file without `--overwrite`; `byos rm` trashes unless `--permanent` is given.',
+  );
   p(
     '- Counts use `,` thousands separators; sizes use binary units with one decimal (as Windows Explorer shows them).',
   );

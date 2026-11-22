@@ -20,6 +20,9 @@ const SCENARIOS = [
   'error',
   'error-json',
   'ls-json',
+  'stat-json',
+  'mkdir-json',
+  'rm-json',
   'put-json',
 ];
 

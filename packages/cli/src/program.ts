@@ -4,6 +4,7 @@ import { Command } from 'commander';
 
 import { registerAuth } from './commands/auth.js';
 import { registerDoctor } from './commands/doctor.js';
+import { registerFiles } from './commands/files.js';
 import type { CliIO } from './io.js';
 
 // One level up from both `src/` and `dist/`, so the same path works in tests and in the build.
@@ -36,5 +37,6 @@ export function createProgram(io: CliIO, state: RunState = { exitCode: 0 }): Com
     });
   registerAuth(program, io);
   registerDoctor(program, io, state);
+  registerFiles(program, io);
   return program;
 }

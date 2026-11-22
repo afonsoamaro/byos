@@ -1,5 +1,6 @@
 import { AuthError, ByosError } from '@byos/core';
 
+import { printable } from './format.js';
 import type { Output } from './output.js';
 
 /** A failure the CLI itself raises (a bad client file, a cancelled sign-in, a usage mistake). */
@@ -48,6 +49,6 @@ export function report(out: Output, error: unknown): number {
       : `unexpected error (${error instanceof Error ? error.name : 'unknown'})`;
   const reason = error instanceof AuthError ? error.reason : undefined;
   out.jsonError({ code, message, ...(reason === undefined ? {} : { reason }) });
-  out.fail(`${code}: ${message}`);
+  out.fail(printable(`${code}: ${message}`));
   return exitCodeFor(error);
 }

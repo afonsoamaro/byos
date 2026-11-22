@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 
-import type { RetryOptions } from '@byos/core';
+import type { RetryOptions, StorageProvider } from '@byos/core';
 
 import { openBrowser } from './auth/open-browser.js';
 
@@ -9,6 +9,8 @@ export interface Sink {
   readonly tty: boolean;
   readonly stream?: NodeJS.WriteStream;
   write(text: string): void;
+  /** Raw bytes, for `byos get` to stdout. Absent on a sink that can't take them. */
+  writeBytes?(bytes: Uint8Array): void;
 }
 
 /**
@@ -25,6 +27,11 @@ export interface CliIO {
   /** Tries to open the page in a browser; false when it couldn't. The URL is printed anyway. */
   readonly openBrowser: (url: string) => Promise<boolean>;
   readonly now: () => number;
+  /**
+   * A provider to use instead of building the Google Drive one, so the file commands run
+   * in-process against an in-memory fake. Never set by the real binary.
+   */
+  readonly createProvider?: () => StorageProvider;
   /** Retry settings for Google requests; tests use zero delays. Default: the library's. */
   readonly retry?: RetryOptions;
   /** How long `byos auth` waits for the redirect. Default 5 minutes. */
@@ -38,6 +45,9 @@ function sink(stream: NodeJS.WriteStream): Sink {
     stream,
     write: (text) => {
       stream.write(text);
+    },
+    writeBytes: (bytes) => {
+      stream.write(bytes);
     },
   };
 }
