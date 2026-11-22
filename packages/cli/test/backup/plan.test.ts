@@ -11,6 +11,9 @@ import { cleanupBackup, manifestFor, tmp, write } from './fixtures.js';
 
 afterEach(cleanupBackup);
 
+// The 1,000-file test is real disk work: it gets the room the other heavy tests get under load.
+const SLOW = Math.max(30_000, Number(process.env.BYOS_TEST_TIMEOUT) || 0);
+
 async function setup(files: Record<string, string>) {
   const folder = await tmp();
   const data = await tmp('byos-data-');
@@ -67,21 +70,25 @@ const dump = (path: string) => {
 };
 
 describe('planBackup', () => {
-  it('plans 1,000 new files, then plans nothing and hashes nothing once they are uploaded', async () => {
-    const { manifest, counted, run } = await setup(many(1000));
-    const first = await run(true);
-    expect(first.found).toBe(1000);
-    expect(first.toUpload).toHaveLength(1000);
-    expect(counted.calls).toBe(1000);
-    expect(first.bytes).toBe(first.toUpload.reduce((sum, item) => sum + item.size, 0));
+  it(
+    'plans 1,000 new files, then plans nothing and hashes nothing once they are uploaded',
+    async () => {
+      const { manifest, counted, run } = await setup(many(1000));
+      const first = await run(true);
+      expect(first.found).toBe(1000);
+      expect(first.toUpload).toHaveLength(1000);
+      expect(counted.calls).toBe(1000);
+      expect(first.bytes).toBe(first.toUpload.reduce((sum, item) => sum + item.size, 0));
 
-    markUploaded(manifest, first.toUpload);
-    counted.calls = 0;
-    const second = await run(true);
-    expect(second.toUpload).toHaveLength(0);
-    expect(second.unchanged).toBe(1000);
-    expect(counted.calls).toBe(0);
-  });
+      markUploaded(manifest, first.toUpload);
+      counted.calls = 0;
+      const second = await run(true);
+      expect(second.toUpload).toHaveLength(0);
+      expect(second.unchanged).toBe(1000);
+      expect(counted.calls).toBe(0);
+    },
+    SLOW,
+  );
 
   it('a dry run leaves the files table byte-identical, even when the time changed', async () => {
     const { folder, manifest, run } = await setup({ 'a.txt': 'one', 'b.txt': 'two' });

@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 
-import type { RetryOptions, StorageProvider } from '@byos/core';
+import type { ByosEvents, RetryOptions, StorageProvider } from '@byos/core';
 
 import { openBrowser } from './auth/open-browser.js';
 
@@ -31,7 +31,12 @@ export interface CliIO {
    * A provider to use instead of building the Google Drive one, so the file commands run
    * in-process against an in-memory fake. Never set by the real binary.
    */
-  readonly createProvider?: () => StorageProvider;
+  readonly createProvider?: (events?: ByosEvents) => StorageProvider;
+  /**
+   * Calls `handler` when the user presses Ctrl+C, and returns a function that stops listening.
+   * Only a long-running command (a backup) listens, so the default Ctrl+C still kills the rest.
+   */
+  readonly onInterrupt?: (handler: () => void) => () => void;
   /** Retry settings for Google requests; tests use zero delays. Default: the library's. */
   readonly retry?: RetryOptions;
   /** How long `byos auth` waits for the redirect. Default 5 minutes. */
@@ -62,5 +67,12 @@ export function realIO(): CliIO {
     fetch: globalThis.fetch,
     openBrowser: (url) => openBrowser(url),
     now: Date.now,
+    onInterrupt: (handler) => {
+      // `once`: a second Ctrl+C falls through to the default and ends the process.
+      process.once('SIGINT', handler);
+      return () => {
+        process.off('SIGINT', handler);
+      };
+    },
   };
 }

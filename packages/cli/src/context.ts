@@ -1,4 +1,4 @@
-import type { StorageProvider } from '@byos/core';
+import type { ByosEvents, StorageProvider } from '@byos/core';
 import { DriveProvider, TokenManager } from '@byos/drive';
 
 import { loadDesktopClient, type DesktopClient } from './client-file.js';
@@ -39,7 +39,7 @@ export function openContext(io: CliIO, flags: GlobalFlags): Context {
 }
 
 /** The Drive side for a Desktop client: a token manager over the CLI's store, and a provider. */
-export function openProvider(ctx: Context, client: DesktopClient) {
+export function openProvider(ctx: Context, client: DesktopClient, events?: ByosEvents) {
   const tokens = new TokenManager({
     store: ctx.store,
     key: TOKEN_KEY,
@@ -55,6 +55,7 @@ export function openProvider(ctx: Context, client: DesktopClient) {
       tokens,
       fetch: ctx.io.fetch,
       ...(ctx.io.retry === undefined ? {} : { retry: ctx.io.retry }),
+      ...(events === undefined ? {} : { events }),
     }),
   };
 }
@@ -63,8 +64,8 @@ export function openProvider(ctx: Context, client: DesktopClient) {
  * The provider the file commands use: the injected one in tests, otherwise Google Drive through
  * the client file `byos auth` saved. Without one there is no sign-in to speak of (exit 5).
  */
-export async function openStorage(ctx: Context): Promise<StorageProvider> {
-  if (ctx.io.createProvider) return ctx.io.createProvider();
+export async function openStorage(ctx: Context, events?: ByosEvents): Promise<StorageProvider> {
+  if (ctx.io.createProvider) return ctx.io.createProvider(events);
   const { clientFile } = await ctx.config.read();
   if (!clientFile) {
     throw new CliError(
@@ -73,5 +74,5 @@ export async function openStorage(ctx: Context): Promise<StorageProvider> {
       'AUTH_FAILED',
     );
   }
-  return openProvider(ctx, await loadDesktopClient(clientFile)).provider;
+  return openProvider(ctx, await loadDesktopClient(clientFile), events).provider;
 }

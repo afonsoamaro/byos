@@ -196,3 +196,23 @@ Second half of backup: execute the plan from FN-12 with bounded concurrency, res
 
 ## Checkpoint
 - `Checkpoint: nao`
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-13-backup-upload`, executed 2026-11-22. `p-limit` 7.3.3 (the SPECS pin, still the latest) added to `@byos/cli`, exact.
+- Order followed: the executor with the record rule and the never-overwrite rule first (tests for full runs, revisions, foreign files, hash mismatch), then the resumable test double and the resume path, then the folder cache, the stop rules, interrupt and concurrency, then progress and the command.
+- Mutation proofs (each restored, `diff` equal): dropping the content hash check fails the hash-mismatch test (the file would have been recorded); skipping the resume path fails the kill-and-resume test; passing `overwrite: true` for a new file fails the foreign-file test (the other user's bytes would be replaced).
+- Deviations from the plan:
+  - `CliIO.onInterrupt` is declared in `io.ts` (where `CliIO` lives) rather than `main.ts`, and `createProvider` now receives the provider events so progress can follow the real `DriveProvider`.
+  - The queue is not cleared with `limit.clearQueue()`: that leaves the pending promises unresolved forever, so the run could never finish waiting. Each queued file checks a stop flag when its turn comes and returns without starting.
+  - `Manifest.clearFolders(relDir)` was added (a stale folder cache drops the folder and everything under it).
+  - Before overwriting a changed file the executor looks up the stored Drive id: gone (trashed or deleted) means it uploads as a new file; moved or renamed means a per-file failure. The returned id is still compared after the upload. The plan only had the after-the-fact check, which comes too late to protect a file.
+  - A file whose size or modification time changed between the plan and its turn is a per-file failure (`CHANGED`), so the recorded hash always describes the bytes that were sent.
+  - A same-name file that already exists in Drive with the same content is adopted (recorded, counted as uploaded); a different one is a `CONFLICT` failure. Failures carry `CONFLICT`, `REMOTE_CHANGED`, `HASH_MISMATCH`, `CHANGED`, `LOCAL_IO` or the provider's own code.
+  - `docs/cli-output.md` (generated from the PP-02 mock) gained the real-run `--json` shape and the concurrency and no-delete rules.
+  - `test/backup/plan.test.ts` (FN-12) now gives its 1,000-file test the same `BYOS_TEST_TIMEOUT` room as the other heavy tests; under load it missed the 5 s default by 0.7 s. `test/helpers.ts` gained `interrupt()`, and the placeholder test for a run without `--dry-run` became "no sign-in stops before scanning (exit 5)".
+- Known limits, by design: a request in flight is not cancelled (the provider has no abort in v1); Drive drops the unconfirmed part of a chunk and the next run resumes from the confirmed offset. A file removed from Drive by hand is not noticed until `--verify` (FN-14). The progress bytes come from the provider's upload events, keyed by file name, so two same-named files uploading together can blur the byte count (the file count stays exact).
+- `BYOS_TEST_TIMEOUT=300000 pnpm check` (machine under load, average about 38): build, lint (0 warnings), prettier and typecheck green; tests 83 core, 162 drive, 228 cli (2 skipped on this file system), 30 root.
+- **verify-it round 1: 95, no vetoes.** Fixed from its findings: tests for the auth stop and for Ctrl+C during a resumable upload (the saved session counts as a partial upload). Left open, low: `runBackup` is long and `upload.ts` also holds the folder cache and error description, `commands/backup.ts` is about 300 lines with a nine-parameter `runUpload`.

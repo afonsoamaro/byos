@@ -592,6 +592,12 @@ async function markdown(): Promise<string> {
     '- `byos backup --dry-run --json` lists `toUpload` as relative paths (POSIX, NFC), `skipped` as `{ relPath, reason }` with the reason one of `system`, `hidden`, `symlink`, `excluded`, `not-regular` or `duplicate`, and `errors` as `{ relPath, code, message }`. The exit code is 1 when `errors` is not empty. A dry run reads the manifest but never writes to it, and creates no file.',
   );
   p(
+    '- `byos backup --json` (a real run) prints one summary object on stdout, `{ uploaded, skipped, failed, remaining, stoppedBy?, failures }`, with `skipped` the files already backed up and unchanged, `stoppedBy` one of `quota`, `auth` or `interrupt`, and `failures` as `{ relPath, code, message }`. No progress is printed. When the run stops early the one-line error also goes to stderr (`QUOTA_EXCEEDED`, `AUTH_FAILED` or `INTERRUPTED`) and the exit code is 6, 5 or 130. Any failed file makes the exit code 1.',
+  );
+  p(
+    '- `byos backup` runs up to `--concurrency` uploads at once (default 4, at most 16). It never deletes anything in Drive and never overwrites a file it did not create.',
+  );
+  p(
     '- A problem with the local disk (no permission, disk full, read-only) is `LOCAL_IO` with exit 1; a local path that does not exist or is not usable is `USAGE` with exit 2.',
   );
   p(
