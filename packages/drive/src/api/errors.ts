@@ -49,6 +49,12 @@ export function mapDriveError(
       retryAfterMs === undefined ? {} : { retryAfterMs },
     );
   }
+  if (status === 403 && reason === 'accessNotConfigured') {
+    return new ProviderError(
+      'the Google Drive API is not enabled in this Google Cloud project (accessNotConfigured)',
+      { retryable: false },
+    );
+  }
   if (status === 403 && reason === 'storageQuotaExceeded') {
     return new QuotaExceededError('your Google Drive is full');
   }

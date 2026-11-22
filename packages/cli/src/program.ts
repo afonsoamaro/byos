@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
 
 import { registerAuth } from './commands/auth.js';
+import { registerDoctor } from './commands/doctor.js';
 import type { CliIO } from './io.js';
 
 // One level up from both `src/` and `dist/`, so the same path works in tests and in the build.
@@ -15,7 +16,7 @@ export interface RunState {
   exitCode: number;
 }
 
-export function createProgram(io: CliIO, _state: RunState = { exitCode: 0 }): Command {
+export function createProgram(io: CliIO, state: RunState = { exitCode: 0 }): Command {
   const program = new Command()
     .name('byos')
     .description('Bring Your Own Storage: keep files in your own cloud drive.')
@@ -34,5 +35,6 @@ export function createProgram(io: CliIO, _state: RunState = { exitCode: 0 }): Co
       outputError: () => undefined,
     });
   registerAuth(program, io);
+  registerDoctor(program, io, state);
   return program;
 }

@@ -157,3 +157,26 @@ Checks, in order:
 
 ## Checkpoint
 - `Checkpoint: nao`
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-10-cli-doctor`, executed 2026-11-21.
+- Step 1 (riskiest): the `token` and `drive-api` checks with the skip chain, tested first. A refresh Google refuses 7 days after consent fails `token` with the publish fix and skips `drive-api`; the same `invalid_grant` 30 days after consent asks to sign in again; a 403 `accessNotConfigured` fails `drive-api` with the enable step (exit 1).
+- New Drive error row in `packages/drive/src/api/errors.ts`: a 403 `accessNotConfigured` is a non-retryable `ProviderError` saying the Drive API isn't enabled in the project, with a drive test.
+- Deviations from the plan:
+  - Check order is client, token, API, scopes, testing mode (the API probe needs a token), as the plan recorded.
+  - The `scopes` check reads the stored token even when its refresh failed, so a wrong-scope sign-in shows up regardless.
+  - `Output.check(status, text, fix?)` prints checklist lines on stdout (doctor's PP-02 output puts failures and warnings there, unlike `warn` and `fail`, which use stderr).
+  - `›` in the fix texts prints as the terminal's step symbol (`>` on the legacy Windows console), so `FIXES` stays one set of strings for the docs test in FN-18.
+  - A refresh that fails for a reason other than the auth state (the network) fails `token` with a "check your network connection" fix.
+  - `doctor-json` was added to the PP-02 mock, and `docs/cli-output.md` regenerated; the drift test still passes.
+- The root test `--ascii uses only the legacy-console symbols` now looks at human lines only: `--json` documents are UTF-8 for machines and keep a `›` inside a fix text, on the legacy console too.
+- `pnpm check`: build, lint (ESLint 0 warnings, Prettier clean), typecheck and tests green: 381 passed (83 in core, 162 in drive, 110 in cli, 26 in the root suite). A first run failed 7 drive resumable tests by time only, with the machine at a load average above 100 (the 50 MiB case took 42 s against its 30 s limit); they passed untouched once the load dropped, so no timeout was changed.
+- After the independent verification (95, no vetoes):
+  - Every doctor test now asserts the Testing-mode reminder and its fix, through the shared helper (the verifier showed by mutation that most failure cases wouldn't have caught its absence).
+  - A stored sign-in that can't be read fails `token` with "run byos auth" instead of the network fix.
+  - Tests for the three failure branches that had none: Drive rejecting the sign-in after a refresh, Drive unreachable, and a refresh that can't reach Google. `CliIO` has an optional `retry` (zero-delay in tests), passed to the token manager and the provider, so those cases don't wait through real backoff.
+- **Test timeouts under load (owner's other work was saturating the machine, load average around 100):** 8 resumable drive tests (FN-06, not touched by this issue) timed out by time only, and `pnpm check` stops at the first failing package, so the CLI and root tests never ran. Rather than loosen the defaults, `packages/drive/vitest.config.mjs` reads an optional `BYOS_TEST_TIMEOUT` (ms) and the 50 MiB test's own limit takes the larger of the two. With the variable unset nothing changes (5 s, and 30 s for that test), so CI behaves as before. The final check below ran with `BYOS_TEST_TIMEOUT=300000`.
+- Final `BYOS_TEST_TIMEOUT=300000 pnpm check` after the fixes: green, 385 tests (83 in core, 162 in drive, 114 in cli, 26 in the root suite).

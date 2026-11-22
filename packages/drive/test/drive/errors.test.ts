@@ -89,6 +89,16 @@ describe('error mapping', () => {
     },
   );
 
+  it('403 accessNotConfigured says the Drive API is not enabled, and is not retried', async () => {
+    const { provider, drive } = setup();
+    drive.failNext(ROOT, driveError(403, 'accessNotConfigured'));
+    const error = await caught(provider.list({ parent: { id: 'root' } }));
+    expect(error).toBeInstanceOf(ProviderError);
+    expect(error.message).toContain('not enabled in this Google Cloud project');
+    expect(error.message).toContain('accessNotConfigured');
+    expect(drive.requests).toHaveLength(1);
+  });
+
   it('5xx is retried, then succeeds', async () => {
     const { provider, drive } = setup();
     drive.failNext(ROOT, driveError(503));
