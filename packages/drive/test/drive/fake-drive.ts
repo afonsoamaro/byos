@@ -121,6 +121,9 @@ export function fakeDrive(initial: FakeFile[] = []) {
     });
 
   const route = (url: URL): Response => {
+    if (url.pathname === '/drive/v3/about') {
+      return json(200, { user: { emailAddress: 'owner@example.com', displayName: 'Owner' } });
+    }
     const match = /^\/drive\/v3\/files(?:\/([^/]+))?$/.exec(url.pathname);
     if (!match) return json(404, driveError(404).body);
     const id = match[1] === undefined ? undefined : decodeURIComponent(match[1]);

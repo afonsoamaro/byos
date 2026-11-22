@@ -147,3 +147,12 @@ describe('get', () => {
     await expect(provider.get({ id: 'gone' })).rejects.toBeInstanceOf(NotFoundError);
   });
 });
+
+describe('account', () => {
+  it('reads the signed-in user from about.get, asking only for the user field', async () => {
+    const { provider, drive } = setup();
+    expect(await provider.account()).toEqual({ email: 'owner@example.com', displayName: 'Owner' });
+    const request = drive.requests.find((r) => r.url.pathname === '/drive/v3/about');
+    expect(request?.url.searchParams.get('fields')).toBe('user(emailAddress,displayName)');
+  });
+});
