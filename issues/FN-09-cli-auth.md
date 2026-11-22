@@ -230,3 +230,31 @@ The user connects their Google account from the terminal: the CLI opens the brow
 
 ## Checkpoint
 - `Checkpoint: sim`, after step 1: the auth flow and token handling are the security surface; run `pnpm check` once the loopback and the happy path pass.
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-09-cli-auth`, executed 2026-11-21.
+- Step 1 (riskiest) and Checkpoint: `auth/loopback.ts`, `client-file.ts`, the CLI skeleton (`io.ts`, `output.ts`, `errors.ts`, `config.ts`, `context.ts`, `main.ts`, `program.ts`) and the `auth` command passed the full in-process flow on the first run (17 tests), and `pnpm check` was green right after (the Checkpoint, after two lint fixes).
+- Added to `@byos/drive`: `DriveProvider.account()` (`about.get` with `fields=user(emailAddress,displayName)`, in `api/about.ts`), with a test and a route in the Drive fake.
+- Mutation proofs (restored, `cmp` equal):
+  - the loopback with its `state` check removed: 3 tests fail (the wrong-state rejection, the callback before the state is armed, and the full flow that keeps waiting after a bad state);
+  - the authorization code printed to the screen: the leak test fails.
+- Deviations from the plan:
+  - `CliIO` has `authTimeoutMs` (default 5 minutes) so tests don't wait; there is no `createProvider` seam yet (FN-11 adds it).
+  - `output.ts` exposes `warn(text, detail)` and `fail(text, detail)` with an optional indented second line, and `jsonError`, which the PP-02 rules needed.
+  - The status `token` row shows when the access token expires (`access token expires in 52 minutes`), since the CLI doesn't record when it last refreshed.
+  - `byos auth` writes the client file path to the config before asking for the account, so a failed `about.get` still leaves a usable config.
+  - The `--json` form of `auth` and `auth logout` prints `{ account, scopes }` and `{ signedOut: true }`; the plan only specified `status --json`.
+  - `src/time.ts` holds the relative-time helpers, reused by FN-10.
+  - The grep `0\.0\.0\.0|shell: true` finds one hit: the comment in `loopback.ts` that says the server never binds there.
+- **Owner manual step, pending:** a real-Google run against the owner's Desktop client (`byos auth --client <file>`, `byos auth status`, `byos auth logout`). Record here the date, whether `about.get` worked with `drive.file`, and anything unexpected (no tokens). Until it is recorded, the automated part is complete and the manual criterion is open.
+- `pnpm check`: build, lint (ESLint 0 warnings, Prettier clean), typecheck and tests green: 354 passed (83 in core, 161 in drive, 85 in cli, 25 in the root suite).
+- After the independent verification (92, no vetoes; the owner's real-Google run is still open):
+  - **`--json` and the sign-in URL:** the plan's "nothing else under `--json`" and the issue's "the printed URL is enough" pulled in opposite directions. Decision: `byos auth --json` prints the sign-in URL as one plain line on stderr, because a person has to open it; commands that need no person print nothing else. The rule is in `docs/cli-output.md` (regenerated from the mock), and FN-10 and FN-11 follow it.
+  - The loopback exposes its bound `address`, asserted unconditionally as `127.0.0.1` (the interface probe stays as a second layer), and it refuses a request whose `Host` isn't `127.0.0.1:<port>` (DNS rebinding), with a test.
+  - The browser opener takes an injectable `spawn`, and is tested per platform (command, arguments, detached, no shell), for a spawn error, and for non-https and shell-looking input.
+  - The client file must have exactly one top-level key, `installed`; a file with `web` as well is refused, and an `installed` block without `client_id` is a usage error with its own message.
+  - The Testing-mode warning's blank separator goes to stderr (`errLine`), and `DAY_MS` replaces a repeated product.
+- Final `pnpm check` after the fixes: green, 366 tests (83 in core, 161 in drive, 97 in cli, 25 in the root suite).

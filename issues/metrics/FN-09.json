@@ -1,0 +1,30 @@
+{
+  "issue": "FN-09",
+  "app": "byos",
+  "branch": "feat/FN-09-cli-auth",
+  "attribution": "branch",
+  "verdict": "pass",
+  "owner_step": "pending: manual run against the owner's real Google project",
+  "score": 92,
+  "dimensions": { "scope": 24, "tests": 18, "security": 14, "reuse": 14, "architecture": 10, "guidelines": 8, "discipline": 4 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "scope", "severity": "medium", "file": "packages/cli/src/commands/auth.ts", "what": "Under --json the sign-in URL was never printed; now one plain line on stderr, documented in docs/cli-output.md", "fixed": true },
+    { "dim": "tests", "severity": "medium", "file": "packages/cli/test/loopback.test.ts", "what": "The 127.0.0.1 bind test could pass vacuously on a machine with only loopback; the bound address is now asserted unconditionally", "fixed": true },
+    { "dim": "tests", "severity": "low", "file": "packages/cli/src/auth/open-browser.ts", "what": "Browser opener untested; spawn is injectable and tested per platform and for refused input", "fixed": true },
+    { "dim": "scope", "severity": "low", "file": "packages/cli/src/client-file.ts", "what": "A client file with web and installed blocks passed; exactly one top-level key is now required", "fixed": true },
+    { "dim": "security", "severity": "low", "file": "packages/cli/src/auth/loopback.ts", "what": "No Host check (DNS rebinding); added with a test", "fixed": true },
+    { "dim": "guidelines", "severity": "low", "file": "packages/cli/src/commands/auth.ts", "what": "Warning separator on stdout instead of stderr; repeated day constant", "fixed": true }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 5.46,
+    "verification_usd": 2.86,
+    "total_usd": 8.32,
+    "tokens": { "input": 186, "output": 178174, "cache_read": 56467031, "cache_creation": 356606, "thinking": 59900 }
+  },
+  "time": { "wall_clock_min": 11, "active_min": 11 },
+  "interactions": { "user_messages": 1, "assistant_turns": 66 },
+  "models": ["claude-sonnet-5-5"],
+  "verified_at": "2026-11-21T23:49:03Z"
+}

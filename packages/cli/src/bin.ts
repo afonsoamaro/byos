@@ -1,4 +1,5 @@
 #!/usr/bin/env node
-import { createProgram } from './program.js';
+import { realIO } from './io.js';
+import { main } from './main.js';
 
-await createProgram().parseAsync(process.argv);
+process.exitCode = await main(process.argv.slice(2), realIO());

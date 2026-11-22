@@ -462,6 +462,9 @@ async function markdown(): Promise<string> {
     '- `--json` prints exactly one JSON document on stdout on success, and exactly one `{ "code", "message" }` on stderr on failure. Nothing else: no color, no progress, no warnings.',
   );
   p(
+    '- `byos auth --json` also prints the sign-in URL on stderr, as one plain line, because a person has to open it. Commands that need no person print nothing else.',
+  );
+  p(
     '- Color follows the terminal: none when the output is not a TTY or `NO_COLOR` is set, forced with `FORCE_COLOR`. Green success, yellow warning, red failure, cyan for URLs and paths, dim for secondary detail. Every status also has a symbol, so nothing depends on color alone.',
   );
   p(

@@ -18,6 +18,7 @@ import {
   type StorageProvider,
 } from '@byos/core';
 
+import { aboutSchema, aboutUrl } from './api/about.js';
 import { DriveClient } from './api/client.js';
 import {
   FILE_FIELDS,
@@ -43,6 +44,11 @@ import { simpleUpload } from './api/simple-upload.js';
 import { BYOS_METADATA_VERSION, SIMPLE_UPLOAD_LIMIT, readBody, sha256Hex } from './api/upload.js';
 import { childByNameQuery, childrenQuery } from './api/query.js';
 import type { TokenManager } from './oauth/token-manager.js';
+
+export interface DriveAccount {
+  readonly email: string;
+  readonly displayName?: string;
+}
 
 export interface DriveProviderOptions {
   /** Hands out access tokens; built by the consumer with its TokenStore and key. */
@@ -242,6 +248,15 @@ export class DriveProvider implements StorageProvider {
       });
       return stat;
     });
+  }
+
+  /** The signed-in Google account, from `about.get` (no extra scope needed). */
+  async account(): Promise<DriveAccount> {
+    const { user } = await this.#client.json('drive.about', aboutUrl(), aboutSchema);
+    return {
+      email: user.emailAddress,
+      ...(user.displayName === undefined ? {} : { displayName: user.displayName }),
+    };
   }
 
   /** Continues a resumable upload from the offset Drive confirmed, even in a new process. */
