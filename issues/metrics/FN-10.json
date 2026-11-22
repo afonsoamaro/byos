@@ -1,0 +1,28 @@
+{
+  "issue": "FN-10",
+  "app": "byos",
+  "branch": "feat/FN-10-cli-doctor",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 95,
+  "dimensions": { "scope": 25, "tests": 16, "security": 15, "reuse": 14, "architecture": 10, "guidelines": 10, "discipline": 5 },
+  "vetoes": [],
+  "findings": [
+    { "dim": "tests", "severity": "low", "file": "packages/cli/test/doctor.test.ts", "what": "The Testing-mode reminder was asserted in only a few cases; now in every case through the shared helper", "fixed": true },
+    { "dim": "tests", "severity": "low", "file": "packages/cli/src/doctor/checks.ts", "what": "Three failure branches had no test (Drive rejecting the sign-in, Drive unreachable, refresh unreachable); added", "fixed": true },
+    { "dim": "architecture", "severity": "low", "file": "packages/cli/src/doctor/checks.ts", "what": "A store-read failure gave the network fix; it now says to sign in again", "fixed": true },
+    { "dim": "reuse", "severity": "low", "file": "packages/cli/src/doctor/fixes.ts", "what": "The Publish app wording exists in three places; to be unified when FN-18 compares the texts", "fixed": false },
+    { "dim": "tests", "severity": "low", "file": "scripts/cli-output-mock.ts", "what": "The doctor-json scenario is hand-written and not compared with the real output shape", "fixed": false }
+  ],
+  "rounds": 1,
+  "cost": {
+    "implementation_usd": 3.38,
+    "verification_usd": 3.33,
+    "total_usd": 6.7,
+    "tokens": { "input": 182, "output": 84584, "cache_read": 53340505, "cache_creation": 208549, "thinking": 24014 }
+  },
+  "time": { "wall_clock_min": 43, "active_min": 43 },
+  "interactions": { "user_messages": 7, "assistant_turns": 58 },
+  "models": ["claude-sonnet-5-5"],
+  "verified_at": "2026-11-22T01:20:50Z"
+}

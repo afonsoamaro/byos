@@ -47,6 +47,8 @@ export interface Output {
   warn(text: string, detail?: string): void;
   /** An error on stderr, with an optional indented second line. */
   fail(text: string, detail?: string): void;
+  /** One line of a checklist on stdout, with the step that fixes it when it didn't pass. */
+  check(status: 'pass' | 'warn' | 'fail' | 'skip', text: string, fix?: string): void;
   /** Under `--json`, the single JSON document on stdout; otherwise nothing. */
   data(value: unknown): void;
   /** Under `--json`, the single `{ code, message }` on stderr. */
@@ -92,6 +94,18 @@ export function createOutput(
     fail: (text, detail) => {
       write(io.err, `${paint('red', sym.fail, io.err)} ${text}`);
       if (detail) write(io.err, `  ${detail}`);
+    },
+    check: (status, text, fix) => {
+      const mark =
+        status === 'pass'
+          ? paint('green', sym.ok, io.out)
+          : status === 'warn'
+            ? paint('yellow', sym.warn, io.out)
+            : status === 'fail'
+              ? paint('red', sym.fail, io.out)
+              : paint('dim', '-', io.out);
+      write(io.out, `${mark} ${text}`);
+      if (fix) write(io.out, `  fix: ${fix}`);
     },
     data: (value) => {
       if (options.json) io.out.write(`${JSON.stringify(value)}\n`);

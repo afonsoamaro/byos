@@ -45,6 +45,14 @@ export function openProvider(ctx: Context, client: DesktopClient) {
     ...(client.clientSecret === undefined ? {} : { clientSecret: client.clientSecret }),
     fetch: ctx.io.fetch,
     now: ctx.io.now,
+    ...(ctx.io.retry === undefined ? {} : { retry: ctx.io.retry }),
   });
-  return { tokens, provider: new DriveProvider({ tokens, fetch: ctx.io.fetch }) };
+  return {
+    tokens,
+    provider: new DriveProvider({
+      tokens,
+      fetch: ctx.io.fetch,
+      ...(ctx.io.retry === undefined ? {} : { retry: ctx.io.retry }),
+    }),
+  };
 }

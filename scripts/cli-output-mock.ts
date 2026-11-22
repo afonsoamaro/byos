@@ -150,6 +150,29 @@ function doctor({ out, sym }: Ctx): number {
   return 5;
 }
 
+function doctorJson({ out }: Ctx): number {
+  const checks = [
+    { id: 'client-file', status: 'pass', message: 'Client file found, and it is a Desktop app' },
+    {
+      id: 'token',
+      status: 'fail',
+      message: 'The sign-in is no longer valid',
+      fix: 'run byos auth',
+    },
+    { id: 'drive-api', status: 'skip', message: 'Needs a valid sign-in first' },
+    { id: 'scopes', status: 'pass', message: 'Scopes: drive.file' },
+    {
+      id: 'testing-mode',
+      status: 'warn',
+      message:
+        "If your OAuth consent screen is in Testing, Google expires refresh tokens 7 days after consent and limits the app to 100 test users. BYOS can't read the publishing status through the API, so this is a reminder, not a check.",
+      fix: 'Google Cloud console › APIs & Services › OAuth consent screen › Publish app',
+    },
+  ];
+  line(out, JSON.stringify({ ok: false, checks }));
+  return 5;
+}
+
 function scanSummary({ out }: Ctx): void {
   line(out, `Scanning ${paint('cyan', MOCK.folder, out)}`);
   const width = fmtCount(MOCK.found).length;
@@ -376,6 +399,13 @@ const SCENARIOS: Scenario[] = [
     command: 'byos backup C:\\Users\\me\\Pictures   (then Ctrl+C)',
     title: 'Backup, interrupted',
     run: backupInterrupted,
+  },
+  {
+    name: 'doctor-json',
+    command: 'byos doctor --json',
+    title: 'Doctor, JSON',
+    json: true,
+    run: doctorJson,
   },
   { name: 'error', command: `byos stat ${MISSING}`, title: 'Error', run: error },
   {

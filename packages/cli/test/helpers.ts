@@ -35,8 +35,11 @@ function capture(): Sink & { text(): string } {
 export type Browser = 'consent' | 'denied' | 'bad-state-then-consent' | 'none';
 
 export interface FakeGoogleOptions {
-  /** Token endpoint replies by grant; defaults are a full token for the code exchange. */
   readonly revokeStatus?: number;
+  /** A refresh the token endpoint refuses with invalid_grant (a revoked or expired token). */
+  readonly refresh?: 'ok' | 'invalid_grant' | 'network';
+  /** `about.get` when the Drive API isn't enabled in the project (403 accessNotConfigured). */
+  readonly about?: 'ok' | 'api-disabled' | 'unauthorized' | 'network';
 }
 
 export interface Recorded {
@@ -66,6 +69,40 @@ export function fakeGoogle(options: FakeGoogleOptions = {}) {
       body,
       ...(authorization === undefined ? {} : { authorization }),
     });
+    if (
+      url.host === 'oauth2.googleapis.com' &&
+      url.pathname === '/token' &&
+      body.grant_type === 'refresh_token' &&
+      options.refresh === 'network'
+    ) {
+      return Promise.reject(new TypeError('fetch failed'));
+    }
+    if (
+      url.host === 'www.googleapis.com' &&
+      url.pathname === '/drive/v3/about' &&
+      options.about === 'network'
+    ) {
+      return Promise.reject(new TypeError('fetch failed'));
+    }
+    if (
+      url.host === 'www.googleapis.com' &&
+      url.pathname === '/drive/v3/about' &&
+      options.about === 'unauthorized'
+    ) {
+      return Promise.resolve(
+        reply(401, { error: { code: 401, errors: [{ reason: 'authError' }] } }),
+      );
+    }
+    if (
+      url.host === 'oauth2.googleapis.com' &&
+      url.pathname === '/token' &&
+      body.grant_type === 'refresh_token' &&
+      options.refresh === 'invalid_grant'
+    ) {
+      return Promise.resolve(
+        reply(400, { error: 'invalid_grant', error_description: 'Token revoked' }),
+      );
+    }
     if (url.host === 'oauth2.googleapis.com' && url.pathname === '/token') {
       return Promise.resolve(
         reply(200, {
@@ -79,6 +116,21 @@ export function fakeGoogle(options: FakeGoogleOptions = {}) {
     }
     if (url.host === 'oauth2.googleapis.com' && url.pathname === '/revoke') {
       return Promise.resolve(reply(options.revokeStatus ?? 200, {}));
+    }
+    if (
+      url.host === 'www.googleapis.com' &&
+      url.pathname === '/drive/v3/about' &&
+      options.about === 'api-disabled'
+    ) {
+      return Promise.resolve(
+        reply(403, {
+          error: {
+            code: 403,
+            message: 'Drive API has not been used',
+            errors: [{ reason: 'accessNotConfigured' }],
+          },
+        }),
+      );
     }
     if (url.host === 'www.googleapis.com' && url.pathname === '/drive/v3/about') {
       return Promise.resolve(
@@ -106,7 +158,13 @@ export interface Harness {
 }
 
 export async function harness(
-  options: { browser?: Browser; authTimeoutMs?: number; revokeStatus?: number } = {},
+  options: {
+    browser?: Browser;
+    authTimeoutMs?: number;
+    revokeStatus?: number;
+    refresh?: 'ok' | 'invalid_grant' | 'network';
+    about?: 'ok' | 'api-disabled' | 'unauthorized' | 'network';
+  } = {},
 ): Promise<Harness> {
   const dir = mkdtempSync(join(tmpdir(), 'byos-cli-'));
   dirs.push(dir);
@@ -114,6 +172,8 @@ export async function harness(
   const err = capture();
   const google = fakeGoogle({
     ...(options.revokeStatus === undefined ? {} : { revokeStatus: options.revokeStatus }),
+    ...(options.refresh === undefined ? {} : { refresh: options.refresh }),
+    ...(options.about === undefined ? {} : { about: options.about }),
   });
   const pages: string[] = [];
   const opened: string[] = [];
@@ -133,6 +193,7 @@ export async function harness(
     fetch: google.fetch,
     now: () => NOW,
     authTimeoutMs: options.authTimeoutMs ?? 10_000,
+    retry: { random: () => 0 },
     openBrowser: (url) => {
       opened.push(url);
       const parsed = new URL(url);

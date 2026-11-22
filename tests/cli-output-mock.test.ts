@@ -13,6 +13,7 @@ const SCENARIOS = [
   'auth',
   'auth-status',
   'doctor',
+  'doctor-json',
   'backup-dry-run',
   'backup',
   'backup-interrupted',
@@ -141,7 +142,9 @@ describe('cli output mock', () => {
 
   it('--ascii uses only the legacy-console symbols', () => {
     const { stdout, stderr } = run('ascii');
-    expect(stdout + stderr).not.toMatch(/[✓✗›…]/);
+    // --json documents are UTF-8 for machines and keep their text as is (a fix can hold `›`).
+    const human = (stdout + stderr).split('\n').filter((line) => !/^[{[]/.test(line));
+    expect(human.join('\n')).not.toMatch(/[✓✗›…]/);
     expect(stdout).toContain('√');
   });
 

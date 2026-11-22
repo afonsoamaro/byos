@@ -198,6 +198,20 @@ stderr:
 
 Exit code 130.
 
+## Doctor, JSON
+
+```text
+$ byos doctor --json
+```
+
+stdout:
+
+```json
+{"ok":false,"checks":[{"id":"client-file","status":"pass","message":"Client file found, and it is a Desktop app"},{"id":"token","status":"fail","message":"The sign-in is no longer valid","fix":"run byos auth"},{"id":"drive-api","status":"skip","message":"Needs a valid sign-in first"},{"id":"scopes","status":"pass","message":"Scopes: drive.file"},{"id":"testing-mode","status":"warn","message":"If your OAuth consent screen is in Testing, Google expires refresh tokens 7 days after consent and limits the app to 100 test users. BYOS can't read the publishing status through the API, so this is a reminder, not a check.","fix":"Google Cloud console › APIs & Services › OAuth consent screen › Publish app"}]}
+```
+
+Exit code 5.
+
 ## Error
 
 ```text

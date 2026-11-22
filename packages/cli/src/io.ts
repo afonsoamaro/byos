@@ -1,5 +1,7 @@
 import { homedir } from 'node:os';
 
+import type { RetryOptions } from '@byos/core';
+
 import { openBrowser } from './auth/open-browser.js';
 
 /** Where output goes. `stream` is set for a real stream, so color follows the terminal. */
@@ -23,6 +25,8 @@ export interface CliIO {
   /** Tries to open the page in a browser; false when it couldn't. The URL is printed anyway. */
   readonly openBrowser: (url: string) => Promise<boolean>;
   readonly now: () => number;
+  /** Retry settings for Google requests; tests use zero delays. Default: the library's. */
+  readonly retry?: RetryOptions;
   /** How long `byos auth` waits for the redirect. Default 5 minutes. */
   readonly authTimeoutMs?: number;
 }

@@ -50,22 +50,26 @@ async function upload(provider: DriveProvider, body: Uint8Array<ArrayBuffer>, ex
 }
 
 describe('resumable upload', () => {
-  it('uploads 50 MiB in 7 chunks of 8 MiB and reports 100 %', async () => {
-    const progress: number[] = [];
-    const { provider, drive } = setup({
-      events: { onUploadProgress: (e) => progress.push(e.bytesConfirmed) },
-    });
-    const body = pattern(50 * MiB);
-    const stat = await upload(provider, body);
-    expect(chunkRequests(drive)).toHaveLength(7);
-    expect(progress.at(-1)).toBe(body.length);
-    expect(stat).toMatchObject({
-      sha256: await sha256Hex(body),
-      size: body.length,
-      mimeType: 'video/mp4',
-    });
-    expect(drive.files.get(stat.id)?.bytes).toEqual(body);
-  }, 30_000);
+  it(
+    'uploads 50 MiB in 7 chunks of 8 MiB and reports 100 %',
+    async () => {
+      const progress: number[] = [];
+      const { provider, drive } = setup({
+        events: { onUploadProgress: (e) => progress.push(e.bytesConfirmed) },
+      });
+      const body = pattern(50 * MiB);
+      const stat = await upload(provider, body);
+      expect(chunkRequests(drive)).toHaveLength(7);
+      expect(progress.at(-1)).toBe(body.length);
+      expect(stat).toMatchObject({
+        sha256: await sha256Hex(body),
+        size: body.length,
+        mimeType: 'video/mp4',
+      });
+      expect(drive.files.get(stat.id)?.bytes).toEqual(body);
+    },
+    Math.max(30_000, Number(process.env.BYOS_TEST_TIMEOUT) || 0),
+  );
 
   it('sends full 256 KiB-aligned chunks, with no empty final chunk on an exact multiple', async () => {
     const { provider, drive } = setup({ chunkSize: CHUNK });
