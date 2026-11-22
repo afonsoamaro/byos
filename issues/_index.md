@@ -26,7 +26,7 @@ BYOS has no screens, so the prototype round is the logo and the CLI's terminal o
 | FN-09 | `byos auth`: loopback OAuth, status and logout | awaiting owner run | FN-03, FN-04, FN-08, PP-02 | sim |
 | FN-10 | `byos doctor` | done | FN-09 | |
 | FN-11 | CLI file commands with `--json` | done | FN-07, FN-09 | sim |
-| FN-12 | `byos backup`: scan, manifest and plan | planned | FN-11 | |
+| FN-12 | `byos backup`: scan, manifest and plan | done | FN-11 | |
 | FN-13 | `byos backup`: upload, resume and progress | planned | FN-06, FN-12 | |
 | FN-14 | `byos backup --verify` | planned | FN-13 | |
 | FN-15 | Spike: file visibility across OAuth clients under `drive.file` | planned | FN-09, FN-11 | |

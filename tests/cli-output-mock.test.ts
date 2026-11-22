@@ -20,6 +20,7 @@ const SCENARIOS = [
   'error',
   'error-json',
   'ls-json',
+  'backup-dry-run-json',
   'stat-json',
   'mkdir-json',
   'rm-json',
