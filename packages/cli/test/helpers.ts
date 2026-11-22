@@ -3,7 +3,7 @@ import { rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { StoredToken } from '@byos/core';
+import type { StorageProvider, StoredToken } from '@byos/core';
 
 import type { CliIO, Sink } from '../src/io.js';
 import { FileTokenStore } from '../src/store/file-token-store.js';
@@ -21,14 +21,19 @@ export async function cleanup(): Promise<void> {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 }
 
-function capture(): Sink & { text(): string } {
+function capture(): Sink & { text(): string; bytes(): Buffer } {
   let buffer = '';
+  const raw: Buffer[] = [];
   return {
     tty: false,
     write: (text) => {
       buffer += text;
     },
+    writeBytes: (bytes) => {
+      raw.push(Buffer.from(bytes));
+    },
     text: () => buffer,
+    bytes: () => Buffer.concat(raw),
   };
 }
 
@@ -151,6 +156,7 @@ export interface Harness {
   readonly opened: string[];
   readonly clientPath: string;
   stdout(): string;
+  stdoutBytes(): Buffer;
   stderr(): string;
   store(): FileTokenStore;
   seed(token: Partial<StoredToken>): Promise<StoredToken>;
@@ -164,6 +170,8 @@ export async function harness(
     revokeStatus?: number;
     refresh?: 'ok' | 'invalid_grant' | 'network';
     about?: 'ok' | 'api-disabled' | 'unauthorized' | 'network';
+    /** Run the file commands against this provider instead of Google Drive. */
+    memory?: StorageProvider;
   } = {},
 ): Promise<Harness> {
   const dir = mkdtempSync(join(tmpdir(), 'byos-cli-'));
@@ -194,6 +202,9 @@ export async function harness(
     now: () => NOW,
     authTimeoutMs: options.authTimeoutMs ?? 10_000,
     retry: { random: () => 0 },
+    ...(options.memory === undefined
+      ? {}
+      : { createProvider: () => options.memory as StorageProvider }),
     openBrowser: (url) => {
       opened.push(url);
       const parsed = new URL(url);
@@ -232,6 +243,7 @@ export async function harness(
     opened,
     clientPath,
     stdout: () => out.text(),
+    stdoutBytes: () => out.bytes(),
     stderr: () => err.text(),
     store,
     async seed(token) {

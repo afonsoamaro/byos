@@ -1,6 +1,8 @@
+import type { StorageProvider } from '@byos/core';
 import { DriveProvider, TokenManager } from '@byos/drive';
 
-import type { DesktopClient } from './client-file.js';
+import { loadDesktopClient, type DesktopClient } from './client-file.js';
+import { CliError } from './errors.js';
 import { ConfigFile } from './config.js';
 import type { CliIO } from './io.js';
 import { createOutput, type Output } from './output.js';
@@ -55,4 +57,21 @@ export function openProvider(ctx: Context, client: DesktopClient) {
       ...(ctx.io.retry === undefined ? {} : { retry: ctx.io.retry }),
     }),
   };
+}
+
+/**
+ * The provider the file commands use: the injected one in tests, otherwise Google Drive through
+ * the client file `byos auth` saved. Without one there is no sign-in to speak of (exit 5).
+ */
+export async function openStorage(ctx: Context): Promise<StorageProvider> {
+  if (ctx.io.createProvider) return ctx.io.createProvider();
+  const { clientFile } = await ctx.config.read();
+  if (!clientFile) {
+    throw new CliError(
+      'not signed in; run byos auth --client <path to the Desktop client JSON>',
+      5,
+      'AUTH_FAILED',
+    );
+  }
+  return openProvider(ctx, await loadDesktopClient(clientFile)).provider;
 }

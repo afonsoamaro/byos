@@ -183,3 +183,23 @@ Thin commands over the provider: `byos ls`, `stat`, `get`, `put`, `mkdir`, `mv`,
 
 ## Checkpoint
 - `Checkpoint: sim`, after step 1: the `--json` and exit-code contract is a public API; run `pnpm check` once it passes.
+
+---
+
+# Execution Record
+
+- Branch `feat/FN-11-cli-file-commands`, executed 2026-11-22.
+- Step 1 (riskiest) and Checkpoint: `remote.ts`, the provider seam (`CliIO.createProvider`, used only by tests), `local.ts` and the eight commands, with `exit-codes.test.ts` proving the table first: each error class gives its exit code and its JSON `code`, with nothing on stdout and exactly one `{ code, message }` line on stderr under `--json`, `✗ CODE: message` in human mode, the `reason` of an auth error in the JSON, a usage mistake as exit 2, and exit 5 with no sign-in at all. `pnpm check` was run at the Checkpoint (it caught three lint errors, fixed).
+- **Security review during execution:** an automated review flagged that `byos get <remote> <folder>` used the remote name as the local file name, and Drive allows names like `../x`. `safeLocalName` (in `local.ts`) replaces separators (on Windows also `<>:"|?*` and control characters, `:` being an NTFS alternate data stream), refuses `.`, `..` and an empty name, and a second check confirms the result stays inside the folder. Tested with remote files named `../escape.txt`, `..` and `.`; the mutation that uses the name as is fails the test.
+- The test of that second check found a bug in it: `relative.startsWith('..')` rejected the sanitised name `.._escape.txt`; only a first segment of exactly `..` leaves the folder.
+- Mutation proofs (restored, `cmp` equal): the remote name used as is fails the traversal test; `get` that always overwrites fails two tests (the `--force` rule and saving into a folder).
+- Deviations from the plan:
+  - `stat`, `ls`, `mkdir`, `mv` and `cp` print `path` only when the file was reached by path; a file reached by `id:<fileId>` has none (Drive ids carry no path). Documented in `docs/cli-output.md`.
+  - `put --remote` accepts `id:<folderId>` as well; `--mkdir` is then ignored, and `--if-absent` lists the folder instead of looking the path up.
+  - `byos get` to stdout needs a sink that takes bytes (`Sink.writeBytes`, set by the real binary and by the test sink).
+  - `rm` looks the file up first (a path ref needs its id for the JSON); an `id:` ref goes straight to the provider, so an already-trashed file can still be deleted for good.
+  - `mv` and `cp` take a full destination path, with a trailing `/` meaning "into that folder"; an `id:` destination is refused.
+  - The PP-02 mock's examples (`Bills/2026-11`) became `Archive/2026-11`, matching the issues, and the doc gained `stat-json`, `mkdir-json` and `rm-json`.
+- **verify-it round 1: 92, no vetoes.** Fixed from its findings: local disk errors in `get` and `put` surfaced as `UNEXPECTED` (now `USAGE` for a missing or unusable path, `LOCAL_IO` for permission, disk full and read-only, documented in `docs/cli-output.md`); the exit-code table was only driven through `stat` (added `put` and `rm` cases); Windows reserved names (`CON`, `NUL.txt`) and trailing dots and spaces in `safeLocalName`; `put --name` with folders, `.` or `..` is a usage error; an obfuscated `3 - 3 + 4` in a test; a pointer comment on the `fmtBytes` copy in the mock script.
+- Not done, by choice: `get --force` still truncates the old file before the download (the overwrite is explicit; a temp-file-and-rename is a good follow-up); `files.ts` stays at about 400 lines, one responsibility (the eight commands); progress lines for `put` and `get` stay with a later issue.
+- `BYOS_TEST_TIMEOUT=300000 pnpm check`: build, lint (ESLint 0 warnings, Prettier clean), typecheck and tests green: 435 passed after the verifier fixes (83 in core, 162 in drive, 161 in cli, 29 in the root suite).

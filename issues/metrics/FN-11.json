@@ -1,0 +1,84 @@
+{
+  "issue": "FN-11",
+  "app": "byos",
+  "branch": "feat/FN-11-cli-file-commands",
+  "attribution": "branch",
+  "verdict": "pass",
+  "score": 92,
+  "dimensions": {
+    "scope": 24,
+    "tests": 18,
+    "security": 14,
+    "reuse": 14,
+    "architecture": 8,
+    "guidelines": 10,
+    "discipline": 4
+  },
+  "vetoes": [],
+  "findings": [
+    {
+      "dim": "scope",
+      "severity": "medium",
+      "file": "packages/cli/src/commands/files.ts",
+      "what": "Local disk errors in get and put surfaced as UNEXPECTED; now USAGE or LOCAL_IO, documented",
+      "fixed": true
+    },
+    {
+      "dim": "tests",
+      "severity": "medium",
+      "file": "packages/cli/test/exit-codes.test.ts",
+      "what": "The exit-code table was only driven through stat; put and rm cases added",
+      "fixed": true
+    },
+    {
+      "dim": "tests",
+      "severity": "low",
+      "file": "packages/cli/test/files.test.ts",
+      "what": "Obfuscated expected value and no Windows traversal case through get; value fixed, win32 rules unit-tested",
+      "fixed": true
+    },
+    {
+      "dim": "security",
+      "severity": "low",
+      "file": "packages/cli/src/local.ts",
+      "what": "Windows reserved names and trailing dots and spaces; handled in safeLocalName",
+      "fixed": true
+    },
+    {
+      "dim": "scope",
+      "severity": "low",
+      "file": "packages/cli/src/commands/files.ts",
+      "what": "put --name with folders, . or .. accepted; now a usage error",
+      "fixed": true
+    },
+    {
+      "dim": "reuse",
+      "severity": "low",
+      "file": "scripts/cli-output-mock.ts",
+      "what": "fmtBytes copy had no pointer to the canonical formatBytes; comment added",
+      "fixed": true
+    },
+    {
+      "dim": "security",
+      "severity": "low",
+      "file": "packages/cli/src/commands/files.ts",
+      "what": "get --force truncates the old file before the download; temp file and rename left as a follow-up",
+      "fixed": false
+    },
+    {
+      "dim": "architecture",
+      "severity": "low",
+      "file": "packages/cli/src/commands/files.ts",
+      "what": "File is about 400 lines for eight commands; left as one responsibility",
+      "fixed": false
+    }
+  ],
+  "rounds": 1,
+  "cost": null,
+  "time": null,
+  "interactions": null,
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "verified_at": "2026-11-22T02:20:00Z"
+}
